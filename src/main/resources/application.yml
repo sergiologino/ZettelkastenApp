@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: noteapp
+  datasource:
+    url: jdbc:postgresql://localhost:5432/noteapp
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  server:
+    port: 8080
+  security:
+    user:
+      name: admin
+      password: admin123
+      enabled: false
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  info:
+    title: NoteApp API
+    description: API для управления заметками и анализа данных
+    version: 1.0.0
