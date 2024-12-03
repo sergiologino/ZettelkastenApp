@@ -26,3 +26,6 @@ springdoc:
     title: NoteApp API
     description: API для управления заметками и анализа данных
     version: 1.0.0
+
+integration:
+  api-url: "https://api.example.com/analyze"

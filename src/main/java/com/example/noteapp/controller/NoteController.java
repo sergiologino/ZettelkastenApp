@@ -1,8 +1,9 @@
 package com.example.noteapp.controller;
 
-import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.model.Note;
+import com.example.noteapp.model.Project;
 import com.example.noteapp.service.NoteService;
+import com.example.noteapp.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -18,65 +19,55 @@ import java.util.UUID;
 public class NoteController {
 
     private final NoteService noteService;
+    private final ProjectService projectService;
 
-    public NoteController(NoteService noteService) {
+    public NoteController(NoteService noteService, ProjectService projectService) {
         this.noteService = noteService;
+        this.projectService = projectService;
     }
 
-    @Operation(summary = "Получить все заметки", description = "Возвращает список всех заметок из базы данных.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Список заметок успешно возвращен",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Note.class))),
-            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
-    })
-    @GetMapping
-    public List<Note> getAllNotes() {
-        return noteService.getAllNotes();
-    }
-
-    @Operation(summary = "Получить заметку по ID", description = "Возвращает заметку с указанным UUID.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Заметка успешно возвращена",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Note.class))),
-            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
-            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
-    })
-    @GetMapping("/{id}")
-    public Note getNoteById(@PathVariable UUID id) {
-        return noteService.getNoteById(id);
-    }
-
-    @Operation(summary = "Создать новую заметку", description = "Сохраняет новую заметку в базе данных.")
+    @Operation(summary = "Создать новую заметку", description = "Создает заметку с возможностью привязки к проекту.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Заметка успешно создана",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = NoteDTO.class))),
+                            schema = @Schema(implementation = Note.class))),
             @ApiResponse(responseCode = "400", description = "Некорректные данные"),
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
     @PostMapping
-    public NoteDTO createNote(@RequestBody NoteDTO noteDTO) {
-        return noteService.saveNote(noteDTO);
+    public Note createNote(@RequestBody Note note, @RequestParam(required = false) UUID projectId) {
+        if (projectId != null) {
+            Project project = projectService.getProjectById(projectId);
+            note.setProject(project);
+        }
+        return noteService.saveNote(note);
     }
 
-    @Operation(summary = "Удалить заметку", description = "Удаляет заметку с указанным UUID из базы данных.")
+    @Operation(summary = "Переместить заметку в другой проект", description = "Перемещает заметку между проектами.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Заметка успешно удалена"),
+            @ApiResponse(responseCode = "200", description = "Заметка успешно перемещена",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Note.class))),
+            @ApiResponse(responseCode = "404", description = "Заметка или проект не найдены"),
+            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
+    })
+    @PutMapping("/{noteId}/move")
+    public Note moveNoteToProject(@PathVariable UUID noteId, @RequestParam UUID projectId) {
+        Project project = projectService.getProjectById(projectId);
+        return noteService.moveNoteToProject(noteId, project);
+    }
+
+    @Operation(summary = "Проанализировать заметку", description = "Отправляет заметку на анализ и присваивает автоматически сгенерированные теги.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Заметка успешно проанализирована",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Note.class))),
             @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
-    @DeleteMapping("/{id}")
-    public void deleteNoteById(@PathVariable UUID id) {
-        noteService.deleteNoteById(id);
+    @PutMapping("/{noteId}/analyze")
+    public Note analyzeNote(@PathVariable UUID noteId) {
+        return noteService.analyzeAndAssignTags(noteId);
     }
-    @PutMapping("/{id}/tags")
-    public Note addTagsToNote(
-            @PathVariable UUID id,
-            @RequestBody List<String> tags,
-            @RequestParam(defaultValue = "false") boolean isAutoGenerated
-    ) {
-        return noteService.addTagsToNote(id, tags, isAutoGenerated);
-    }
+
 }
