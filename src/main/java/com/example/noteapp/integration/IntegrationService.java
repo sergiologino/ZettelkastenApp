@@ -59,4 +59,15 @@ public class IntegrationService {
         }
     }
 
+    public String analyzeGroupContent(String content) {
+        // Реализовать запрос к внешнему API для анализа
+        return "Результат группового анализа"; // Пример
+    }
+
+    public List<String> extractTags(String annotation) {
+        // Извлечь теги из аннотации
+        return List.of("тег1", "тег2"); // Пример
+    }
+
+
 }

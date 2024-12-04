@@ -121,4 +121,24 @@ public class NoteController {
     public Note getNoteById(@PathVariable UUID id) {
         return noteService.getNoteById(id);
     }
+
+    @PutMapping("/group/analyze")
+    @Operation(summary = "Обработать группу заметок",
+            description = "Обрабатывает группу заметок по их ID.")
+    public Note analyzeGroup(
+            @RequestParam List<UUID> noteIds,
+            @RequestParam String chatId
+    ) {
+        return noteService.analyzeGroupNotes(noteIds, chatId);
+    }
+
+    @PutMapping("/project/{projectId}/analyze")
+    @Operation(summary = "Обработать заметки проекта",
+            description = "Обрабатывает все заметки внутри проекта.")
+    public Note analyzeProjectNotes(
+            @PathVariable UUID projectId,
+            @RequestParam String chatId
+    ) {
+        return noteService.analyzeProjectNotes(projectId, chatId);
+    }
 }

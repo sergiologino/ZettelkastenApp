@@ -16,7 +16,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class NoteService {
@@ -194,4 +196,85 @@ public class NoteService {
 
         return note;
     }
+
+    public Note analyzeGroupNotes(List<UUID> noteIds, String chatId) {
+        List<Note> notes = noteRepository.findAllById(noteIds);
+
+        if (notes.isEmpty()) {
+            throw new RuntimeException("No notes found for provided IDs.");
+        }
+
+        // Собираем данные для анализа
+        String combinedContent = notes.stream()
+                .map(Note::getContent)
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining("\n\n"));
+
+        // Отправляем на анализ
+        String annotation = integrationService.analyzeGroupContent(combinedContent);
+        List<String> autoTagNames = integrationService.extractTags(annotation);
+
+        List<Tag> autoTags = autoTagNames.stream()
+                .map(tagName -> tagService.createTag(tagName, true))
+                .collect(Collectors.toList());
+
+        // Создаем групповую заметку
+        Note groupNote = new Note();
+        groupNote.setContent("Групповая заметка: \n\n" + combinedContent);
+        groupNote.setAnnotation(annotation);
+        groupNote.setTags(autoTags);
+        groupNote.setAiSummary(true);
+
+        noteRepository.save(groupNote);
+
+        // Отправляем результат в Telegram
+        String message = "Групповая обработка завершена!\n" +
+                "Ссылка: /api/notes/" + groupNote.getId() + "\n" +
+                "Аннотация: " + annotation + "\n" +
+                "Теги: " + autoTags.stream().map(Tag::getName).collect(Collectors.joining(", "));
+        telegramService.sendMessage(chatId, message);
+
+        return groupNote;
+    }
+
+    public Note analyzeProjectNotes(UUID projectId, String chatId) {
+        List<Note> notes = noteRepository.findAllByProjectId(projectId);
+
+        if (notes.isEmpty()) {
+            throw new RuntimeException("No notes found for project ID: " + projectId);
+        }
+
+        // Собираем данные для анализа
+        String combinedContent = notes.stream()
+                .map(Note::getContent)
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining("\n\n"));
+
+        // Отправляем на анализ
+        String annotation = integrationService.analyzeGroupContent(combinedContent);
+        List<String> autoTagNames  = integrationService.extractTags(annotation);
+
+        List<Tag> autoTags = autoTagNames.stream()
+                .map(tagName -> tagService.createTag(tagName, true))
+                .collect(Collectors.toList());
+
+        // Создаем групповую заметку
+        Note projectGroupNote = new Note();
+        projectGroupNote.setContent("Групповая заметка проекта: \n\n" + combinedContent);
+        projectGroupNote.setAnnotation(annotation);
+        projectGroupNote.setTags(autoTags);
+        projectGroupNote.setAiSummary(true);
+
+        noteRepository.save(projectGroupNote);
+
+        // Отправляем результат в Telegram
+        String message = "Обработка заметок проекта завершена!\n" +
+                "Ссылка: /api/notes/" + projectGroupNote.getId() + "\n" +
+                "Аннотация: " + annotation + "\n" +
+                "Теги: " + autoTags.stream().map(Tag::getName).collect(Collectors.joining(", "));
+        telegramService.sendMessage(chatId, message);
+
+        return projectGroupNote;
+    }
+
 }
