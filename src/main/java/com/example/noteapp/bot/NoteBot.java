@@ -91,16 +91,11 @@ public class NoteBot extends TelegramLongPollingBot {
         String chatId = message.getChatId().toString();
         String userMessage = message.getText();
 
-        if (userMessage.startsWith("/addnote ")) {
-            String noteContent = userMessage.substring(9).trim();
-            if (noteContent.isEmpty()) {
-                sendResponse(chatId, "Ошибка: текст заметки не может быть пустым.");
-            } else {
-                String result = sendNoteToBackend(noteContent, null, null);
-                sendResponse(chatId, result);
-            }
+        if (userMessage.startsWith("/analyze ")) {
+            String noteId = userMessage.substring(9).trim();
+            analyzeNoteInBackend(noteId, chatId);
         } else {
-            sendResponse(chatId, "Неизвестная команда. Используйте /addnote {текст} для создания заметки.");
+            sendResponse(chatId, "Неизвестная команда. Используйте /analyze {noteId}.");
         }
     }
 
@@ -179,6 +174,19 @@ public class NoteBot extends TelegramLongPollingBot {
             execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void analyzeNoteInBackend(String noteId, String chatId) {
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            restTemplate.postForEntity(
+                    "http://localhost:8080/api/notes/" + noteId + "/analyze?chatId=" + chatId,
+                    null, Void.class
+            );
+            sendResponse(chatId, "Заметка отправлена на анализ. Ожидайте результатов.");
+        } catch (Exception e) {
+            sendResponse(chatId, "Ошибка при отправке на анализ: " + e.getMessage());
         }
     }
 }

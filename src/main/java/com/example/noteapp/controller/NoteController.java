@@ -52,8 +52,8 @@ public class NoteController {
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
     @PutMapping("/{noteId}/analyze")
-    public Note analyzeNote(@PathVariable UUID noteId) {
-        return noteService.analyzeAndAssignTags(noteId);
+    public Note analyzeNote(@PathVariable UUID noteId, @RequestParam String chatId) {
+        return noteService.analyzeAndAssignTags(noteId, chatId);
     }
 
     @Operation(summary = "Добавить файл к заметке", description = "Позволяет прикрепить файл к существующей заметке.")

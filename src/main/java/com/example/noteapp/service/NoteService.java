@@ -25,12 +25,14 @@ public class NoteService {
     private final NoteRepository noteRepository;
     private final TagService tagService;
     private final IntegrationService integrationService;
+    private final TelegramService telegramService;
 
-    public NoteService(AbstractConverter converter, NoteRepository noteRepository, TagService tagService, IntegrationService integrationService) {
+    public NoteService(AbstractConverter converter, NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService) {
         this.converter = converter;
         this.noteRepository = noteRepository;
         this.tagService = tagService;
         this.integrationService = integrationService;
+        this.telegramService = telegramService;
     }
 
     public List<Note> getAllNotes() {
@@ -77,7 +79,7 @@ public class NoteService {
         return noteRepository.save(note);
     }
 
-    public Note analyzeAndAssignTags(UUID noteId) {
+    public Note analyzeAndAssignTags(UUID noteId, String chatId) {
         Note note = noteRepository.findById(noteId).orElseThrow(() -> new RuntimeException("Note not found"));
 
         // Вызываем интеграционный сервис для анализа содержимого
@@ -87,10 +89,16 @@ public class NoteService {
         for (String tagName : autoTags) {
             Tag tag = tagService.createTag(tagName, true);
             if (!note.getTags().contains(tag)) { // Избегаем дублирования тегов
+                // Реальный текст аннотации
                 note.getTags().add(tag);
             }
+            note.setAnnotation("Результат анализа");
+            String message = "Заметка обработана!\n" +
+                    "Ссылка: /api/notes/" + noteId + "\n" +
+                    "Аннотация: " + note.getAnnotation() + "\n" +
+                    "Теги: " + String.join(", ", autoTags);
+            telegramService.sendMessage(chatId, message);
         }
-
         return noteRepository.save(note);
     }
 
@@ -105,7 +113,6 @@ public class NoteService {
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
-
             // Генерируем имя файла
             String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
             String filePath = uploadPath.resolve(originalFileName).toString();
@@ -117,7 +124,6 @@ public class NoteService {
             if (neuralNetwork != null) {
                 note.setNeuralNetwork(neuralNetwork);
             }
-
             return noteRepository.save(note);
         } catch (Exception e) {
             throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
