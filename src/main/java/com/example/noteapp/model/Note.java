@@ -2,6 +2,7 @@ package com.example.noteapp.model;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,7 +44,18 @@ public class Note {
             joinColumns = @JoinColumn(name = "note_id"),
             inverseJoinColumns = @JoinColumn(name = "tag_id")
     )
-    private List<Tag> tags;
+    private List<Tag> tags=new ArrayList<>();
+
+    @Column(nullable = true)
+    private String filePath; // Путь к загруженному файлу
+
+    @Column(nullable = true)
+    private String fileType; // Тип файла (image, pdf, doc, xls, txt, csv)
+
+    @Column(nullable = true)
+    private String neuralNetwork; // Нейросеть, используемая для анализа
+
+
 
     public Note() {
     }
@@ -121,6 +133,30 @@ public class Note {
 
     public void setProject(Project project) {
         this.project = project;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
+    public String getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(String fileType) {
+        this.fileType = fileType;
+    }
+
+    public String getNeuralNetwork() {
+        return neuralNetwork;
+    }
+
+    public void setNeuralNetwork(String neuralNetwork) {
+        this.neuralNetwork = neuralNetwork;
     }
 
 }

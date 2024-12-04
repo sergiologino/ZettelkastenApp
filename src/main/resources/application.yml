@@ -29,3 +29,8 @@ springdoc:
 
 integration:
   api-url: "https://api.example.com/analyze"
+
+telegram:
+  bot:
+    token: "7645020182:AAESVweSGS_n7ZbxFx3NNRE4YmrvZ6HsXvg"
+    username: "AltaBrain_bot"
