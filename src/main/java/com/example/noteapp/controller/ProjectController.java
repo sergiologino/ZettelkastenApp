@@ -1,12 +1,15 @@
 package com.example.noteapp.controller;
 
+import com.example.noteapp.model.Note;
 import com.example.noteapp.model.Project;
+import com.example.noteapp.service.NoteService;
 import com.example.noteapp.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,9 +20,11 @@ import java.util.UUID;
 public class ProjectController {
 
     private final ProjectService projectService;
+    private final NoteService noteService;
 
-    public ProjectController(ProjectService projectService) {
+    public ProjectController(ProjectService projectService, NoteService noteService) {
         this.projectService = projectService;
+        this.noteService = noteService;
     }
 
     @Operation(summary = "Получить список всех проектов", description = "Возвращает список всех проектов.")
@@ -31,7 +36,10 @@ public class ProjectController {
     })
     @GetMapping
     public List<Project> getAllProjects() {
-        return projectService.getAllProjects();
+        List<Project> allProject = projectService.getAllProjects();
+        System.out.println("all project: "+allProject);
+        return allProject;
+
     }
 
     @Operation(summary = "Получить проект по ID", description = "Возвращает проект по указанному идентификатору.")
@@ -44,7 +52,8 @@ public class ProjectController {
     })
     @GetMapping("/{id}")
     public Project getProjectById(@PathVariable UUID id) {
-        return projectService.getProjectById(id);
+        Project responseProject = projectService.getProjectById(id);
+        return responseProject;
     }
 
     @Operation(summary = "Создать новый проект", description = "Создает новый проект с указанным названием и описанием.")
@@ -67,7 +76,25 @@ public class ProjectController {
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
     @DeleteMapping("/{id}")
-    public void deleteProjectById(@PathVariable UUID id) {
+    public ResponseEntity<Object> deleteProjectById(@PathVariable UUID id) {
         projectService.deleteProjectById(id);
+        Project project = projectService.getProjectById(id);
+             //   .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Проект не найден"));
+
+        // Удаляем связанные заметки TODO реализовать эндпойнт
+        //noteService.deleteNote(project.getNotes());
+
+        // Удаляем проект
+        projectService.deleteProjectById(project.getId());
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{projectId}/notes")
+    public List<Note> getNotesByProject(@PathVariable UUID projectId) {
+        Project project = projectService.getProjectById(projectId);
+              //  .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Проект не найден"));
+
+        return project.getNotes();
     }
 }

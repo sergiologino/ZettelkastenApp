@@ -9,6 +9,7 @@ import com.example.noteapp.model.Project;
 import com.example.noteapp.model.Tag;
 import com.example.noteapp.repository.NoteRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,13 +29,15 @@ public class NoteService {
     private final TagService tagService;
     private final IntegrationService integrationService;
     private final TelegramService telegramService;
+    private final ProjectService projectService;
 
-    public NoteService(AbstractConverter converter, NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService) {
+    public NoteService(AbstractConverter converter, NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService) {
         this.converter = converter;
         this.noteRepository = noteRepository;
         this.tagService = tagService;
         this.integrationService = integrationService;
         this.telegramService = telegramService;
+        this.projectService = projectService;
     }
 
     public List<Note> getAllNotes() {
@@ -174,29 +177,43 @@ public class NoteService {
         }
     }
 
-    public Note createNote(String content, String fileUrl, String fileName) {
-        Note note = new Note();
-        note.setContent(content);
-        if (fileUrl != null && fileName != null) {
-            note.setFilePath(fileUrl);
-            note.setFileType(detectFileType(fileName));
+//    public Note createNote(String content, String fileUrl, String fileName, String project)
+    @Transactional
+    public Note createNote(Note note){
+       // Note note = new Note();
+       // note.setContent(content);
+        if (note.getUrl() != null && note.getFilePath() != null) {
+//            note.setFilePath(fileUrl);
+//            note.setFileType(detectFileType(fileName));
+        }
+        if (note.getProject() == null || note.getProject().getId() == null) {
+            note.setProject(projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3")));
+            note.setContent(note.getContent()+" проект добавлен вручную в сервисном методе createNote");
+            //throw new IllegalArgumentException("Проект обязателен для создания заметки.");
         }
         noteRepository.save(note);
-
+        System.out.println("body of note entity: " + note);
         // Отправляем на анализ
-        List<String> tags = integrationService.analyzeNoteContent(note);
-        // Присваиваем автоматически сгенерированные теги
-        for (String tagName : tags) {
-            Tag tag = tagService.createTag(tagName, true);
-            if (!note.getTags().contains(tag)) { // Избегаем дублирования тегов
-                note.getTags().add(tag);
+        if (note.isAnalyze()) {
+            try {
+                List<String> tags = integrationService.analyzeNoteContent(note);
+                // Присваиваем автоматически сгенерированные теги
+                for (String tagName : tags) {
+                    Tag tag = tagService.createTag(tagName, true);
+                    if (!note.getTags().contains(tag)) { // Избегаем дублирования тегов
+                        note.getTags().add(tag);
+                    }
+                }
+            } catch (Exception e) {
+                // Логируем ошибку, но не прерываем процесс
+                System.err.println("Ошибка при анализе заметки: " + e.getMessage());
+                noteRepository.save(note);
+
+
             }
         }
-        noteRepository.save(note);
-
         return note;
     }
-
     public Note analyzeGroupNotes(List<UUID> noteIds, String chatId) {
         List<Note> notes = noteRepository.findAllById(noteIds);
 

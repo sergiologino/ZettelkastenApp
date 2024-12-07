@@ -2,6 +2,7 @@ package com.example.noteapp.controller;
 
 import com.example.noteapp.model.Note;
 import com.example.noteapp.model.Project;
+import com.example.noteapp.repository.ProjectRepository;
 import com.example.noteapp.service.NoteService;
 import com.example.noteapp.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,8 +10,12 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +28,7 @@ public class NoteController {
 
     private final NoteService noteService;
     private final ProjectService projectService;
+
 
     public NoteController(NoteService noteService, ProjectService projectService) {
         this.noteService = noteService;
@@ -93,21 +99,33 @@ public class NoteController {
             @ApiResponse(responseCode = "400", description = "Некорректные данные"),
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
-    @PostMapping
-    public Map<String, Object> createNote(
-            @RequestParam(value = "content", required = false) String content,
-            @RequestParam(value = "fileUrl", required = false) String fileUrl,
-            @RequestParam(value = "fileName", required = false) String fileName
-    ) {
-        Note note = noteService.createNote(content, fileUrl, fileName);
 
-        // Формируем ответ со ссылкой на заметку и результатом анализа
-        Map<String, Object> response = new HashMap<>();
-        response.put("noteUrl", "/api/notes/" + note.getId());
-        response.put("analysis", note.getAnnotation());
-        response.put("tags", note.getTags());
-        return response;
+
+    @PostMapping
+    public ResponseEntity<?> createNote(@RequestBody Note note) {
+        System.out.println("Полученные данные: content:" + note.getContent()+" proj_id: "+note.getProject().getId()+" note: "+note.toString());
+        try {
+            // Проверяем, что поле content не пустое
+            if (note.getContent() == null || note.getContent().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Текст заметки не может быть пустым.");
+            }
+
+            // Проверяем, что проект указан
+            if (note.getProject() == null) {
+                Project newProject = projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3"));
+                //return ResponseEntity.badRequest().body("Проект обязателен для создания заметки.");
+            }
+
+//            Note savedNote = noteService.createNote(note.getContent(),note.getFilePath(),note.getFileType());
+            Note savedNote = noteService.createNote(note);
+            return ResponseEntity.ok(savedNote);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Ошибка при создании заметки: " + e.getMessage());
+        }
     }
+
+
 
     @Operation(summary = "Получить заметку по ID", description = "Возвращает заметку с указанным идентификатором.")
     @ApiResponses(value = {
@@ -140,5 +158,23 @@ public class NoteController {
             @RequestParam String chatId
     ) {
         return noteService.analyzeProjectNotes(projectId, chatId);
+    }
+
+    @RequestMapping("/api/projects")
+    public class ProjectController {
+
+        private final ProjectRepository projectRepository;
+
+        public ProjectController(ProjectRepository projectRepository) {
+            this.projectRepository = projectRepository;
+        }
+
+        @GetMapping("/{projectId}/notes")
+        public List<Note> getNotesByProject(@PathVariable UUID projectId) {
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Проект не найден"));
+
+            return project.getNotes(); // Возвращаем список заметок проекта
+        }
     }
 }

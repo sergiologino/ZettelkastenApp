@@ -1,6 +1,8 @@
 package com.example.noteapp.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +18,7 @@ public class Note {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
+    @NotNull(message = "Текст заметки обязателен.")
     @Column(nullable = false)
     private String content;
 
@@ -34,6 +37,8 @@ public class Note {
     @Column(nullable = true)
     private boolean aiSummary;
 
+    @JsonIgnore
+    @NotNull(message = "Проект обязателен.")
     @ManyToOne
     @JoinColumn(name = "project_id")
     private Project project;
@@ -56,9 +61,22 @@ public class Note {
     private String neuralNetwork; // Нейросеть, используемая для анализа
 
 
+    @Column(name = "should_analyze", nullable = false)
+    private boolean analyze = false; // Новый флаг для анализа
+
+
 
     public Note() {
     }
+
+    public boolean isAnalyze() {
+        return analyze;
+    }
+
+    public void setAnalyze(boolean analyze) {
+        this.analyze = analyze;
+    }
+
 
 
     public List<Tag> getTags() {
