@@ -93,8 +93,8 @@ public class ProjectController {
     @GetMapping("/{projectId}/notes")
     public List<Note> getNotesByProject(@PathVariable UUID projectId) {
         Project project = projectService.getProjectById(projectId);
-              //  .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Проект не найден"));
+        List<Note> foundedNotes=noteService.getNotesByProjectId(projectId);
 
-        return project.getNotes();
+        return foundedNotes;
     }
 }

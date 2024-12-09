@@ -293,5 +293,12 @@ public class NoteService {
 
         return projectGroupNote;
     }
+    public List<Note> getNotesByProjectId(UUID projectId) {
+        List<Note> foundedNotes = noteRepository.findAllByProjectId(projectId);
+        for (Note note : foundedNotes) {
+            note.setProject(projectService.getProjectById(note.getProject().getId()));
+        }
+        return foundedNotes;
+    }
 
 }

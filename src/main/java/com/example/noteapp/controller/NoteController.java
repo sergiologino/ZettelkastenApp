@@ -95,15 +95,16 @@ public class NoteController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Заметка успешно создана",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Map.class))),
+                            schema = @Schema(implementation = Note.class))),
             @ApiResponse(responseCode = "400", description = "Некорректные данные"),
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
 
 
-    @PostMapping
-    public ResponseEntity<?> createNote(@RequestBody Note note) {
+    @PostMapping("/{projectId}")
+    public ResponseEntity<?> createNote(@PathVariable UUID projectId, @RequestBody Note note) {
         System.out.println("Полученные данные: content:" + note.getContent()+" proj_id: "+note.getProject().getId()+" note: "+note.toString());
+        note.setProject(projectService.getProjectById(projectId));
         try {
             // Проверяем, что поле content не пустое
             if (note.getContent() == null || note.getContent().trim().isEmpty()) {
@@ -169,12 +170,13 @@ public class NoteController {
             this.projectRepository = projectRepository;
         }
 
-        @GetMapping("/{projectId}/notes")
-        public List<Note> getNotesByProject(@PathVariable UUID projectId) {
-            Project project = projectRepository.findById(projectId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Проект не найден"));
+    @GetMapping("/{projectId}/notes")
+    public List<Note> getNotesByProject(@PathVariable UUID projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Проект не найден"));
+        List<Note> foundedNotes=noteService.getNotesByProjectId(projectId);
 
-            return project.getNotes(); // Возвращаем список заметок проекта
-        }
+        return foundedNotes; // Возвращаем список заметок проекта
+    }
     }
 }
