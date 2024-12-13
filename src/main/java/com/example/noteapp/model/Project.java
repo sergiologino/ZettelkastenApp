@@ -21,6 +21,10 @@ public class Project {
     @Column(length = 500)
     private String description;
 
+
+    @Column(length = 10, nullable = true)
+    private String color;
+
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Note> notes;
 
@@ -58,5 +62,13 @@ public class Project {
 
     public void setNotes(List<Note> notes) {
         this.notes = notes;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
     }
 }

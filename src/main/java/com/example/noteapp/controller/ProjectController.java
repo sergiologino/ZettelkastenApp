@@ -1,5 +1,7 @@
 package com.example.noteapp.controller;
 
+import com.example.noteapp.dto.NoteDTO;
+import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.Note;
 import com.example.noteapp.model.Project;
 import com.example.noteapp.service.NoteService;
@@ -12,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,10 +24,12 @@ public class ProjectController {
 
     private final ProjectService projectService;
     private final NoteService noteService;
+    private final NoteConverter noteConverter;
 
-    public ProjectController(ProjectService projectService, NoteService noteService) {
+    public ProjectController(ProjectService projectService, NoteService noteService, NoteConverter noteConverter) {
         this.projectService = projectService;
         this.noteService = noteService;
+        this.noteConverter = noteConverter;
     }
 
     @Operation(summary = "Получить список всех проектов", description = "Возвращает список всех проектов.")
@@ -91,10 +96,15 @@ public class ProjectController {
     }
 
     @GetMapping("/{projectId}/notes")
-    public List<Note> getNotesByProject(@PathVariable UUID projectId) {
+    public List<NoteDTO> getNotesByProject(@PathVariable UUID projectId) {
         Project project = projectService.getProjectById(projectId);
+        List<NoteDTO> newNoteDTOList=new ArrayList<>();
         List<Note> foundedNotes=noteService.getNotesByProjectId(projectId);
-
-        return foundedNotes;
+        for(Note note:foundedNotes){
+            note.setProject(project);
+            note.setTags(noteService.getTagsByNoteId(note.getId()));
+            newNoteDTOList.add(noteConverter.toDTO(note));
+        }
+        return newNoteDTOList;
     }
 }

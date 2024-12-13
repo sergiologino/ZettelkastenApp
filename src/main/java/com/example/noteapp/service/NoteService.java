@@ -4,22 +4,28 @@ import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.integration.IntegrationException;
 import com.example.noteapp.integration.IntegrationService;
 import com.example.noteapp.mapper.AbstractConverter;
+import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.Note;
+import com.example.noteapp.model.OpenGraphData;
 import com.example.noteapp.model.Project;
 import com.example.noteapp.model.Tag;
 import com.example.noteapp.repository.NoteRepository;
+import com.example.noteapp.repository.OpenGraphDataRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 
 @Service
 public class NoteService {
@@ -30,14 +36,19 @@ public class NoteService {
     private final IntegrationService integrationService;
     private final TelegramService telegramService;
     private final ProjectService projectService;
+    private final NoteConverter noteConverter;
+    private final OpenGraphDataRepository openGraphDataRepository;
 
-    public NoteService(AbstractConverter converter, NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService) {
+
+    public NoteService(AbstractConverter converter, NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, NoteConverter noteConverter, OpenGraphDataRepository openGraphDataRepository) {
         this.converter = converter;
         this.noteRepository = noteRepository;
         this.tagService = tagService;
         this.integrationService = integrationService;
         this.telegramService = telegramService;
         this.projectService = projectService;
+        this.noteConverter = noteConverter;
+        this.openGraphDataRepository = openGraphDataRepository;
     }
 
     public List<Note> getAllNotes() {
@@ -177,11 +188,14 @@ public class NoteService {
         }
     }
 
-//    public Note createNote(String content, String fileUrl, String fileName, String project)
     @Transactional
-    public Note createNote(Note note){
-       // Note note = new Note();
-       // note.setContent(content);
+    public Note updateNote(NoteDTO note){
+        return noteRepository.save(noteConverter.toEntity(note));
+    }
+
+    @Transactional
+    public Note createNote(Note note, List<String> links){
+
         if (note.getUrl() != null && note.getFilePath() != null) {
 //            note.setFilePath(fileUrl);
 //            note.setFileType(detectFileType(fileName));
@@ -192,6 +206,12 @@ public class NoteService {
             //throw new IllegalArgumentException("Проект обязателен для создания заметки.");
         }
         noteRepository.save(note);
+        // Обрабатываем ссылки и сохраняем Open Graph данные
+        List<OpenGraphData> openGraphDataList = links.stream()
+                .map(link -> fetchOpenGraphData(link, note))
+                .collect(Collectors.toList());
+
+        openGraphDataRepository.saveAll(openGraphDataList);
         System.out.println("body of note entity: " + note);
         // Отправляем на анализ
         if (note.isAnalyze()) {
@@ -214,6 +234,30 @@ public class NoteService {
         }
         return note;
     }
+
+    private OpenGraphData fetchOpenGraphData(String url, Note note) {
+        try {
+            Document document = Jsoup.connect(url).get();
+            OpenGraphData ogData = new OpenGraphData();
+            ogData.setUrl(url);
+            ogData.setTitle(getMetaTagContent(document, "og:title"));
+            ogData.setDescription(getMetaTagContent(document, "og:description"));
+            ogData.setImage(getMetaTagContent(document, "og:image"));
+            ogData.setNote(note);
+            return ogData;
+        } catch (IOException e) {
+            System.err.println("Ошибка при обработке Open Graph: " + url);
+            return null;
+        }
+    }
+
+    private String getMetaTagContent(Document document, String metaName) {
+        return document.select("meta[property=" + metaName + "]").attr("content");
+    }
+
+
+
+
     public Note analyzeGroupNotes(List<UUID> noteIds, String chatId) {
         List<Note> notes = noteRepository.findAllById(noteIds);
 
@@ -245,11 +289,14 @@ public class NoteService {
         noteRepository.save(groupNote);
 
         // Отправляем результат в Telegram
-        String message = "Групповая обработка завершена!\n" +
-                "Ссылка: /api/notes/" + groupNote.getId() + "\n" +
-                "Аннотация: " + annotation + "\n" +
-                "Теги: " + autoTags.stream().map(Tag::getName).collect(Collectors.joining(", "));
-        telegramService.sendMessage(chatId, message);
+        if(!chatId.isEmpty()){
+
+                String message = "Групповая обработка завершена!\n" +
+                        "Ссылка: /api/notes/" + groupNote.getId() + "\n" +
+                        "Аннотация: " + annotation + "\n" +
+                        "Теги: " + autoTags.stream().map(Tag::getName).collect(Collectors.joining(", "));
+                telegramService.sendMessage(chatId, message);
+        }
 
         return groupNote;
     }
@@ -293,6 +340,7 @@ public class NoteService {
 
         return projectGroupNote;
     }
+
     public List<Note> getNotesByProjectId(UUID projectId) {
         List<Note> foundedNotes = noteRepository.findAllByProjectId(projectId);
         for (Note note : foundedNotes) {
@@ -300,5 +348,40 @@ public class NoteService {
         }
         return foundedNotes;
     }
+
+    public List<Tag> getTagsByNoteId(UUID noteId) { return noteRepository.findTagsByNoteId(noteId); }
+
+    public List<Tag> getTagsByName(List<String> tags) {
+        List<Tag> tagList = new ArrayList<>();
+        for (String tagName : tags) {
+            Tag tag = tagService.findOrCreateTag(tagName, false);
+            tagList.add(tag);
+        }
+        return tagList;
+    }
+
+    public Map<String, NoteDTO.OpenGraphData> processOpenGraphData(List<String> links) {
+        Map<String, NoteDTO.OpenGraphData> openGraphDataMap = new HashMap<>();
+
+        for (String link : links) {
+            try {
+                Document document = Jsoup.connect(link).get();
+                NoteDTO.OpenGraphData ogData = new NoteDTO.OpenGraphData();
+
+                ogData.setTitle(getMetaTagContent(document, "og:title"));
+                ogData.setDescription(getMetaTagContent(document, "og:description"));
+                ogData.setImage(getMetaTagContent(document, "og:image"));
+                ogData.setUrl(link);
+
+                openGraphDataMap.put(link, ogData);
+            } catch (IOException e) {
+                // Логируем ошибку, если невозможно обработать ссылку
+                System.err.println("Ошибка при обработке ссылки: " + link + " - " + e.getMessage());
+            }
+        }
+
+        return openGraphDataMap;
+    }
+
 
 }

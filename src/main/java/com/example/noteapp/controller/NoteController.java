@@ -1,5 +1,7 @@
 package com.example.noteapp.controller;
 
+import com.example.noteapp.dto.NoteDTO;
+import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.Note;
 import com.example.noteapp.model.Project;
 import com.example.noteapp.repository.ProjectRepository;
@@ -28,11 +30,13 @@ public class NoteController {
 
     private final NoteService noteService;
     private final ProjectService projectService;
+    private final NoteConverter noteConverter;
 
 
-    public NoteController(NoteService noteService, ProjectService projectService) {
+    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter) {
         this.noteService = noteService;
         this.projectService = projectService;
+        this.noteConverter = noteConverter;
     }
 
     @Operation(summary = "Переместить заметку в другой проект", description = "Перемещает заметку между проектами.")
@@ -48,6 +52,21 @@ public class NoteController {
         Project project = projectService.getProjectById(projectId);
         return noteService.moveNoteToProject(noteId, project);
     }
+
+    @Operation(summary = "Обновить заметку ", description = "Обновляет заметку ")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Заметка успешно обновлена",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = NoteDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
+            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
+    })
+    @PutMapping
+    public Note updateNote(@RequestBody NoteDTO noteDTO ) {
+        return noteService.updateNote(noteDTO);
+    }
+
+
 
     @Operation(summary = "Проанализировать заметку", description = "Отправляет заметку на анализ и присваивает автоматически сгенерированные теги.")
     @ApiResponses(value = {
@@ -102,24 +121,29 @@ public class NoteController {
 
 
     @PostMapping("/{projectId}")
-    public ResponseEntity<?> createNote(@PathVariable UUID projectId, @RequestBody Note note) {
-        System.out.println("Полученные данные: content:" + note.getContent()+" proj_id: "+note.getProject().getId()+" note: "+note.toString());
-        note.setProject(projectService.getProjectById(projectId));
+    public ResponseEntity<?> createNote(@PathVariable UUID projectId, @RequestBody NoteDTO noteDto) {
+        System.out.println("Полученные данные: content:" + noteDto.getContent()+" note: "+noteDto.toString());
+        noteDto.setProjectId(projectId);
         try {
             // Проверяем, что поле content не пустое
-            if (note.getContent() == null || note.getContent().trim().isEmpty()) {
+            if (noteDto.getContent() == null || noteDto.getContent().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("Текст заметки не может быть пустым.");
             }
 
             // Проверяем, что проект указан
-            if (note.getProject() == null) {
+            if (noteDto.getProjectId() == null) {
                 Project newProject = projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3"));
                 //return ResponseEntity.badRequest().body("Проект обязателен для создания заметки.");
             }
 
 //            Note savedNote = noteService.createNote(note.getContent(),note.getFilePath(),note.getFileType());
-            Note savedNote = noteService.createNote(note);
-            return ResponseEntity.ok(savedNote);
+            if (noteDto.getUrl() != null && !noteDto.getUrl().isEmpty()) {
+                // Обрабатываем ссылки и получаем Open Graph данные
+                Map<String, NoteDTO.OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDto.getUrl());
+                noteDto.setOpenGraphData(openGraphData);
+            }
+            Note savedNote = noteService.createNote(noteConverter.toEntity(noteDto), noteDto.getUrls());
+            return ResponseEntity.ok(noteDto);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Ошибка при создании заметки: " + e.getMessage());
@@ -161,22 +185,16 @@ public class NoteController {
         return noteService.analyzeProjectNotes(projectId, chatId);
     }
 
-    @RequestMapping("/api/projects")
-    public class ProjectController {
-
-        private final ProjectRepository projectRepository;
-
-        public ProjectController(ProjectRepository projectRepository) {
-            this.projectRepository = projectRepository;
-        }
-
     @GetMapping("/{projectId}/notes")
     public List<Note> getNotesByProject(@PathVariable UUID projectId) {
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Проект не найден"));
+        Project project = projectService.getProjectById(projectId);
+        if (project == null) {
+            new ResponseStatusException(HttpStatus.NOT_FOUND,"Project not found");
+        }
+
         List<Note> foundedNotes=noteService.getNotesByProjectId(projectId);
 
         return foundedNotes; // Возвращаем список заметок проекта
     }
-    }
 }
+

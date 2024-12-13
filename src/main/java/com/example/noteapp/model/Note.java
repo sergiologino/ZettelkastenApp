@@ -12,8 +12,6 @@ import java.util.UUID;
 @Table(name = "notes")
 public class Note {
 
-
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
@@ -64,20 +62,33 @@ public class Note {
     @Column(name = "should_analyze", nullable = false)
     private boolean analyze = false; // Новый флаг для анализа
 
+    @Column(name="position_x", nullable = true)
+    private Long positionX;
+
+    @Column(name="position_y", nullable = true)
+    private Long positionY;
+
+    @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OpenGraphData> openGraphData;
 
 
+    // constructors
     public Note() {
     }
 
-    public boolean isAnalyze() {
-        return analyze;
+    //Setters and Getters
+
+    public List<OpenGraphData> getOpenGraphData() {
+        return openGraphData;
     }
 
-    public void setAnalyze(boolean analyze) {
-        this.analyze = analyze;
+    public void setOpenGraphData(List<OpenGraphData> openGraphData) {
+        this.openGraphData = openGraphData;
     }
 
+    public boolean isAnalyze() { return analyze; }
 
+    public void setAnalyze(boolean analyze) { this.analyze = analyze; }
 
     public List<Tag> getTags() {
         return tags;
@@ -87,9 +98,15 @@ public class Note {
         this.tags = tags;
     }
 
+    public Long getPositionX() { return positionX; }
+
+    public Long getPositionY() { return positionY; }
+
+    public void setPositionX(Long positionX) { this.positionX = positionX; }
+
+    public void setPositionY(Long positionY) { this.positionY = positionY; }
 
 
-    // Геттеры и сеттеры
     public UUID getId() {
         return id;
     }
@@ -145,6 +162,7 @@ public class Note {
     public void setAiSummary(boolean aiSummary) {
         this.aiSummary = aiSummary;
     }
+
     public Project getProject() {
         return project;
     }
