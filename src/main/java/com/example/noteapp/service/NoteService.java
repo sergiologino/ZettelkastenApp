@@ -202,7 +202,7 @@ public class NoteService {
         }
         if (note.getProject() == null || note.getProject().getId() == null) {
             note.setProject(projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3")));
-            note.setContent(note.getContent()+" проект добавлен вручную в сервисном методе createNote");
+            note.setContent(note.getContent()+" проект добавлен костылем в createNote");
             //throw new IllegalArgumentException("Проект обязателен для создания заметки.");
         }
         noteRepository.save(note);
@@ -244,6 +244,7 @@ public class NoteService {
             ogData.setDescription(getMetaTagContent(document, "og:description"));
             ogData.setImage(getMetaTagContent(document, "og:image"));
             ogData.setNote(note);
+            System.err.println("graphData:"+ogData);
             return ogData;
         } catch (IOException e) {
             System.err.println("Ошибка при обработке Open Graph: " + url);

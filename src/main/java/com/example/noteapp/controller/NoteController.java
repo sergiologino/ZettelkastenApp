@@ -141,9 +141,9 @@ public class NoteController {
             //--------------------- ЗАГЛУШКИ ---------------------------
             //
             noteDto.setNeuralNetwork("YandexGPT-Lite");
-            noteDto.setAnalyze(false);
+            noteDto.setAnalyze(true);
 
-//            Note savedNote = noteService.createNote(note.getContent(),note.getFilePath(),note.getFileType());
+//
             if (noteDto.getUrl() != null && !noteDto.getUrl().isEmpty()) {
                 // Обрабатываем ссылки и получаем Open Graph данные
                 Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDto.getUrl());
