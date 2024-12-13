@@ -131,10 +131,16 @@ public class NoteController {
             }
 
             // Проверяем, что проект указан
+            // ЕСЛИ НЕТ  - ТО СТАВИМ ДЕФОЛТНЫЙ
             if (noteDto.getProjectId() == null) {
                 Project newProject = projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3"));
                 //return ResponseEntity.badRequest().body("Проект обязателен для создания заметки.");
             }
+            //
+            //--------------------- ЗАГЛУШКИ ---------------------------
+            //
+            noteDto.setNeuralNetwork("YandexGPT-Lite");
+            noteDto.setAnalyze(false);
 
 //            Note savedNote = noteService.createNote(note.getContent(),note.getFilePath(),note.getFileType());
             if (noteDto.getUrl() != null && !noteDto.getUrl().isEmpty()) {
