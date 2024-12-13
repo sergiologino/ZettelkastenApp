@@ -1,6 +1,8 @@
 package com.example.noteapp.dto;
 
 
+import com.example.noteapp.model.OpenGraphData;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -12,7 +14,7 @@ public class NoteDTO {
 
     private String content;
 
-    private List<String> url;
+    private List<String> urls;
 
     private String audioFilePath;
 
@@ -41,45 +43,45 @@ public class NoteDTO {
 
 
 
-    public static class OpenGraphData {
-        private String title;
-        private String description;
-        private String image;
-        private String url;
-
-        // Геттеры и сеттеры
-        public String getTitle() {
-            return title;
-        }
-
-        public void setTitle(String title) {
-            this.title = title;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-
-        public void setDescription(String description) {
-            this.description = description;
-        }
-
-        public String getImage() {
-            return image;
-        }
-
-        public void setImage(String image) {
-            this.image = image;
-        }
-
-        public String getUrl() {
-            return url;
-        }
-
-        public void setUrl(String url) {
-            this.url = url;
-        }
-    }
+//    public static class OpenGraphData {
+//        private String title;
+//        private String description;
+//        private String image;
+//        private String url;
+//
+//        // Геттеры и сеттеры
+//        public String getTitle() {
+//            return title;
+//        }
+//
+//        public void setTitle(String title) {
+//            this.title = title;
+//        }
+//
+//        public String getDescription() {
+//            return description;
+//        }
+//
+//        public void setDescription(String description) {
+//            this.description = description;
+//        }
+//
+//        public String getImage() {
+//            return image;
+//        }
+//
+//        public void setImage(String image) {
+//            this.image = image;
+//        }
+//
+//        public String getUrl() {
+//            return url;
+//        }
+//
+//        public void setUrl(String url) {
+//            this.url = url;
+//        }
+//    }
 
 
 
@@ -88,7 +90,7 @@ public class NoteDTO {
     public NoteDTO(String content, List<String> url, String audioFilePath, String recognizedText, String annotation, boolean aiSummary, UUID projectId, List<String> tags, String filePath, String fileType, boolean analyze, String neuralNetwork, Long x, Long y) {
         this.id = UUID.randomUUID();
         this.content = content;
-        this.url = url;
+        this.urls = urls;
         this.audioFilePath = audioFilePath;
         this.recognizedText = recognizedText;
         this.annotation = annotation;
@@ -110,7 +112,7 @@ public class NoteDTO {
     private Map<String, OpenGraphData> openGraphData; // Данные Open Graph
 
     public List<String> getUrls() {
-        return url;
+        return urls;
 
     }
 
@@ -140,7 +142,7 @@ public class NoteDTO {
     }
 
     public List<String> getUrl() {
-        return url;
+        return urls;
     }
 
     public String getAudioFilePath() {
@@ -182,7 +184,7 @@ public class NoteDTO {
     }
 
     public void setUrl(List<String> url) {
-        this.url = url;
+        this.urls = url;
     }
 
     public void setAudioFilePath(String audioFilePath) {

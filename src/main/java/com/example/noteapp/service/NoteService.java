@@ -360,13 +360,13 @@ public class NoteService {
         return tagList;
     }
 
-    public Map<String, NoteDTO.OpenGraphData> processOpenGraphData(List<String> links) {
-        Map<String, NoteDTO.OpenGraphData> openGraphDataMap = new HashMap<>();
+    public Map<String, OpenGraphData> processOpenGraphData(List<String> links) {
+        Map<String, OpenGraphData> openGraphDataMap = new HashMap<>();
 
         for (String link : links) {
             try {
                 Document document = Jsoup.connect(link).get();
-                NoteDTO.OpenGraphData ogData = new NoteDTO.OpenGraphData();
+                OpenGraphData ogData = new OpenGraphData();
 
                 ogData.setTitle(getMetaTagContent(document, "og:title"));
                 ogData.setDescription(getMetaTagContent(document, "og:description"));

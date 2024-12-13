@@ -3,6 +3,7 @@ package com.example.noteapp.controller;
 import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.Note;
+import com.example.noteapp.model.OpenGraphData;
 import com.example.noteapp.model.Project;
 import com.example.noteapp.repository.ProjectRepository;
 import com.example.noteapp.service.NoteService;
@@ -145,7 +146,7 @@ public class NoteController {
 //            Note savedNote = noteService.createNote(note.getContent(),note.getFilePath(),note.getFileType());
             if (noteDto.getUrl() != null && !noteDto.getUrl().isEmpty()) {
                 // Обрабатываем ссылки и получаем Open Graph данные
-                Map<String, NoteDTO.OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDto.getUrl());
+                Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDto.getUrl());
                 noteDto.setOpenGraphData(openGraphData);
             }
             Note savedNote = noteService.createNote(noteConverter.toEntity(noteDto), noteDto.getUrls());
