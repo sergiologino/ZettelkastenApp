@@ -64,6 +64,21 @@ public class NoteController {
     })
     @PutMapping
     public Note updateNote(@RequestBody NoteDTO noteDTO ) {
+
+        noteDTO.setNeuralNetwork("YandexGPT-Lite");
+        noteDTO.setAnalyze(true);
+
+//
+        if (noteDTO.getUrl() != null && !noteDTO.getUrl().isEmpty()) {
+            // Обрабатываем ссылки и получаем Open Graph данные
+            Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDTO.getUrl());
+            noteDTO.setOpenGraphData(openGraphData);
+        }
+        // TODO сделать MultiPartFile тип, см. страницу в Opera
+//        if (noteDTO.getFilePath() != null && !noteDTO.getFilePath().isEmpty()) {
+//            noteService.addFileToNote(noteDTO.getId(), noteDTO.getFileType(), noteDTO.getNeuralNetwork());
+//        }
+
         return noteService.updateNote(noteDTO);
     }
 
@@ -150,7 +165,9 @@ public class NoteController {
                 noteDto.setOpenGraphData(openGraphData);
             }
             Note savedNote = noteService.createNote(noteConverter.toEntity(noteDto), noteDto.getUrls());
-            return ResponseEntity.ok(noteDto);
+            NoteDTO newNoteDTO = noteConverter.toDTO(savedNote);
+
+            return ResponseEntity.ok(newNoteDTO);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Ошибка при создании заметки: " + e.getMessage());

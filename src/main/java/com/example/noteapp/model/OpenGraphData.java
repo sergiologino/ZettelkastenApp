@@ -1,5 +1,6 @@
 package com.example.noteapp.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.UUID;
 
@@ -18,6 +19,7 @@ public class OpenGraphData {
     private String description;
     private String image;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
     private Note note;
