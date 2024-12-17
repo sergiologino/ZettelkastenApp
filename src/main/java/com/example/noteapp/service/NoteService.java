@@ -4,7 +4,7 @@ import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.integration.IntegrationException;
 import com.example.noteapp.integration.IntegrationService;
 import com.example.noteapp.mapper.AbstractConverter;
-import com.example.noteapp.mapper.NoteConverter;
+//import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.Note;
 import com.example.noteapp.model.OpenGraphData;
 import com.example.noteapp.model.Project;
@@ -30,24 +30,24 @@ import org.jsoup.select.Elements;
 @Service
 public class NoteService {
 
-    private final AbstractConverter converter;
+
     private final NoteRepository noteRepository;
     private final TagService tagService;
     private final IntegrationService integrationService;
     private final TelegramService telegramService;
     private final ProjectService projectService;
-    private final NoteConverter noteConverter;
+  //  private final NoteConverter noteConverter;
     private final OpenGraphDataRepository openGraphDataRepository;
 
 
-    public NoteService(AbstractConverter converter, NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, NoteConverter noteConverter, OpenGraphDataRepository openGraphDataRepository) {
-        this.converter = converter;
+    public NoteService( NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, OpenGraphDataRepository openGraphDataRepository) {
+
         this.noteRepository = noteRepository;
         this.tagService = tagService;
         this.integrationService = integrationService;
         this.telegramService = telegramService;
         this.projectService = projectService;
-        this.noteConverter = noteConverter;
+       // this.noteConverter = noteConverter;
         this.openGraphDataRepository = openGraphDataRepository;
     }
 
@@ -189,30 +189,48 @@ public class NoteService {
     }
 
     @Transactional
-    public Note updateNote(NoteDTO note){
-        return noteRepository.save(noteConverter.toEntity(note));
+    public Note updateNote(Note note, List<String> links) {
+        if (links != null && !links.isEmpty()) {
+            List<OpenGraphData> openGraphDataList = links.stream()
+                    .map(link -> fetchOpenGraphData(link, note))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            // Удаляем старые OpenGraph данные
+            openGraphDataRepository.deleteAll(note.getOpenGraphData());
+            openGraphDataRepository.saveAll(openGraphDataList);
+            note.setOpenGraphData(openGraphDataList);
+        }
+
+        return noteRepository.save(note);
     }
 
     @Transactional
     public Note createNote(Note note, List<String> links){
 
-        if (note.getUrl() != null && note.getFilePath() != null) {
+//        if (note.getUrl() != null && note.getFilePath() != null) {
 //            note.setFilePath(fileUrl);
 //            note.setFileType(detectFileType(fileName));
-        }
+//        }
         if (note.getProject() == null || note.getProject().getId() == null) {
             note.setProject(projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3")));
             note.setContent(note.getContent()+" проект добавлен костылем в createNote");
             //throw new IllegalArgumentException("Проект обязателен для создания заметки.");
         }
         noteRepository.save(note);
-        // Обрабатываем ссылки и сохраняем Open Graph данные
-        List<OpenGraphData> openGraphDataList = links.stream()
-                .map(link -> fetchOpenGraphData(link, note))
-                .collect(Collectors.toList());
 
-        openGraphDataRepository.saveAll(openGraphDataList);
-        System.out.println("body of note entity: " + note);
+        // Обрабатываем ссылки и сохраняем Open Graph данные
+        if (links != null && !links.isEmpty()) {
+            List<OpenGraphData> openGraphDataList = links.stream()
+                    .map(link -> fetchOpenGraphData(link, note))
+                    .filter(Objects::nonNull) // Игнорируем ошибки получения данных
+                    .collect(Collectors.toList());
+
+            openGraphDataRepository.saveAll(openGraphDataList);
+            note.setOpenGraphData(openGraphDataList);
+        }
+        noteRepository.save(note);
+
         // Отправляем на анализ
         if (note.isAnalyze()) {
             try {
@@ -382,6 +400,28 @@ public class NoteService {
         }
 
         return openGraphDataMap;
+    }
+
+    public List<String> getUrlsByNoteId (Note note){
+        return openGraphDataRepository.findUrlsByNoteId(note.getId());
+    }
+
+    public OpenGraphData getOpenGraphDataByUrl(String url) {
+        System.out.println("Получен URL для поиска: " + url);
+        return openGraphDataRepository.findByUrl(url).stream().findFirst()
+                .orElseThrow(() -> new RuntimeException("OpenGraphData not found for URL: " + url));
+    }
+
+    public List<OpenGraphData> getOpenGraphDataForNote(UUID noteId) {
+    //public List<OpenGraphData> getOpenGraphDataForNote(UUID noteId, List<String> urls) {
+        // Проверяем, существует ли заметка
+        System.out.println("Получен noteId для поиска: " + noteId);
+//        Note note = noteRepository.findById(noteId)
+//                .orElseThrow(() -> new RuntimeException("Note not found with ID: " + noteId));
+
+        // Получаем все OpenGraph объекты для переданных URL, связанных с заметкой
+        return openGraphDataRepository.findByNoteId(noteId);
+//        return openGraphDataRepository.findByNoteIdAndUrls(noteId, urls);
     }
 
 

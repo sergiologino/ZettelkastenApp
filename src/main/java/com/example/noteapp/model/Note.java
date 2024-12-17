@@ -21,9 +21,6 @@ public class Note {
     private String content;
 
     @Column(nullable = true)
-    private String url;
-
-    @Column(nullable = true)
     private String audioFilePath;
 
     @Column(nullable = true)
@@ -121,14 +118,6 @@ public class Note {
 
     public void setContent(String content) {
         this.content = content;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
     }
 
     public String getAudioFilePath() {

@@ -1,6 +1,7 @@
 package com.example.noteapp.controller;
 
 import com.example.noteapp.dto.NoteDTO;
+import com.example.noteapp.dto.OpenGraphRequest;
 import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.Note;
 import com.example.noteapp.model.OpenGraphData;
@@ -24,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/notes")
@@ -54,6 +56,8 @@ public class NoteController {
         return noteService.moveNoteToProject(noteId, project);
     }
 
+
+
     @Operation(summary = "Обновить заметку ", description = "Обновляет заметку ")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Заметка успешно обновлена",
@@ -63,26 +67,71 @@ public class NoteController {
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
     @PutMapping
-    public Note updateNote(@RequestBody NoteDTO noteDTO ) {
+    public NoteDTO updateNote(@RequestBody NoteDTO noteDTO ) {
 
-        noteDTO.setNeuralNetwork("YandexGPT-Lite");
-        noteDTO.setAnalyze(true);
+       noteDTO.setNeuralNetwork("YandexGPT-Lite");
+       noteDTO.setAnalyze(true);
 
-//
-        if (noteDTO.getUrl() != null && !noteDTO.getUrl().isEmpty()) {
-            // Обрабатываем ссылки и получаем Open Graph данные
-            Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDTO.getUrl());
-            noteDTO.setOpenGraphData(openGraphData);
-        }
-        // TODO сделать MultiPartFile тип, см. страницу в Opera
-//        if (noteDTO.getFilePath() != null && !noteDTO.getFilePath().isEmpty()) {
-//            noteService.addFileToNote(noteDTO.getId(), noteDTO.getFileType(), noteDTO.getNeuralNetwork());
-//        }
+       Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDTO.getUrls());
+       noteDTO.setOpenGraphData(openGraphData);
 
-        return noteService.updateNote(noteDTO);
+// Получаем список OpenGraphData для заметки
+        List<OpenGraphData> openGraphDataList = noteService.getOpenGraphDataForNote(noteDTO.getId());
+
+        // Преобразуем список OpenGraphData в карту, где ключ - URL
+        Map<String, OpenGraphData> openGraphDataMap = openGraphDataList.stream()
+                .collect(Collectors.toMap(OpenGraphData::getUrl, data -> data));
+        System.out.println(openGraphDataMap);
+
+        // Добавляем OpenGraphData в NoteDTO
+        noteDTO.setOpenGraphData(openGraphDataMap);
+
+        return noteDTO;
     }
 
+    @Operation(summary = "Создать новую заметку", description = "Создает новую заметку. Может содержать текст, файл или голосовой файл.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Заметка успешно создана",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Note.class))),
+            @ApiResponse(responseCode = "400", description = "Некорректные данные"),
+            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
+    })
 
+
+    @PostMapping("/{projectId}")
+    public ResponseEntity<?> createNote(@PathVariable UUID projectId, @RequestBody NoteDTO noteDto) {
+        System.out.println("Полученные данные: content:" + noteDto.getContent()+" note: "+noteDto.toString());
+        noteDto.setProjectId(projectId);
+        try {            // Проверяем, что поле content не пустое
+            if (noteDto.getContent() == null || noteDto.getContent().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Текст заметки не может быть пустым.");
+            }
+            // Проверяем, что проект указан
+            // ЕСЛИ НЕТ  - ТО СТАВИМ ДЕФОЛТНЫЙ
+            if (noteDto.getProjectId() == null) {
+                Project newProject = projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3"));
+                //return ResponseEntity.badRequest().body("Проект обязателен для создания заметки.");
+            }
+            //--------------------- ЗАГЛУШКИ ---------------------------
+            noteDto.setNeuralNetwork("YandexGPT-Lite");
+            noteDto.setAnalyze(true);
+
+//
+            if (noteDto.getUrl() != null && !noteDto.getUrl().isEmpty()) {
+                // Обрабатываем ссылки и получаем Open Graph данные
+                Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDto.getUrl());
+                noteDto.setOpenGraphData(openGraphData);
+            }
+            Note savedNote = noteService.createNote(noteConverter.toEntity(noteDto), noteDto.getUrls());
+            NoteDTO newNoteDTO = noteConverter.toDTO(savedNote);
+
+            return ResponseEntity.ok(newNoteDTO);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Ошибка при создании заметки: " + e.getMessage());
+        }
+    }
 
     @Operation(summary = "Проанализировать заметку", description = "Отправляет заметку на анализ и присваивает автоматически сгенерированные теги.")
     @ApiResponses(value = {
@@ -96,6 +145,8 @@ public class NoteController {
     public Note analyzeNote(@PathVariable UUID noteId, @RequestParam String chatId) {
         return noteService.analyzeAndAssignTags(noteId, chatId);
     }
+
+
 
     @Operation(summary = "Добавить файл к заметке", description = "Позволяет прикрепить файл к существующей заметке.")
     @ApiResponses(value = {
@@ -126,53 +177,6 @@ public class NoteController {
         return noteService.addAudioToNote(noteId, file);
     }
 
-    @Operation(summary = "Создать новую заметку", description = "Создает новую заметку. Может содержать текст, файл или голосовой файл.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Заметка успешно создана",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Note.class))),
-            @ApiResponse(responseCode = "400", description = "Некорректные данные"),
-            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
-    })
-
-
-    @PostMapping("/{projectId}")
-    public ResponseEntity<?> createNote(@PathVariable UUID projectId, @RequestBody NoteDTO noteDto) {
-        System.out.println("Полученные данные: content:" + noteDto.getContent()+" note: "+noteDto.toString());
-        noteDto.setProjectId(projectId);
-        try {
-            // Проверяем, что поле content не пустое
-            if (noteDto.getContent() == null || noteDto.getContent().trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Текст заметки не может быть пустым.");
-            }
-
-            // Проверяем, что проект указан
-            // ЕСЛИ НЕТ  - ТО СТАВИМ ДЕФОЛТНЫЙ
-            if (noteDto.getProjectId() == null) {
-                Project newProject = projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3"));
-                //return ResponseEntity.badRequest().body("Проект обязателен для создания заметки.");
-            }
-            //
-            //--------------------- ЗАГЛУШКИ ---------------------------
-            //
-            noteDto.setNeuralNetwork("YandexGPT-Lite");
-            noteDto.setAnalyze(true);
-
-//
-            if (noteDto.getUrl() != null && !noteDto.getUrl().isEmpty()) {
-                // Обрабатываем ссылки и получаем Open Graph данные
-                Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDto.getUrl());
-                noteDto.setOpenGraphData(openGraphData);
-            }
-            Note savedNote = noteService.createNote(noteConverter.toEntity(noteDto), noteDto.getUrls());
-            NoteDTO newNoteDTO = noteConverter.toDTO(savedNote);
-
-            return ResponseEntity.ok(newNoteDTO);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Ошибка при создании заметки: " + e.getMessage());
-        }
-    }
 
 
 
@@ -210,15 +214,100 @@ public class NoteController {
     }
 
     @GetMapping("/{projectId}/notes")
-    public List<Note> getNotesByProject(@PathVariable UUID projectId) {
-        Project project = projectService.getProjectById(projectId);
-        if (project == null) {
-            new ResponseStatusException(HttpStatus.NOT_FOUND,"Project not found");
-        }
+    public List<NoteDTO> getNotesByProject(@PathVariable UUID projectId) {
+        List<Note> notes = noteService.getNotesByProjectId(projectId);
 
-        List<Note> foundedNotes=noteService.getNotesByProjectId(projectId);
+        return notes.stream()
+                .map(note -> {
+                    // Конвертируем Note в NoteDTO
+                    NoteDTO noteDTO = noteConverter.toDTO(note);
 
-        return foundedNotes; // Возвращаем список заметок проекта
+                    // Получаем список OpenGraphData для заметки
+                    List<OpenGraphData> openGraphDataList = noteService.getOpenGraphDataForNote(note.getId());
+
+                    // Преобразуем список OpenGraphData в карту, где ключ - URL
+                    Map<String, OpenGraphData> openGraphDataMap = openGraphDataList.stream()
+                            .collect(Collectors.toMap(OpenGraphData::getUrl, data -> data));
+                    System.out.println(openGraphDataMap);
+
+                    // Добавляем OpenGraphData в NoteDTO
+                    noteDTO.setOpenGraphData(openGraphDataMap);
+
+                    return noteDTO;
+                })
+                .collect(Collectors.toList());
     }
+
+    @Operation(
+            summary = "Получить OpenGraph объект по URL",
+            description = "Возвращает объект OpenGraphData, связанный с указанным URL.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Объект OpenGraphData успешно найден",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = OpenGraphData.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Объект OpenGraphData не найден",
+                            content = @Content(mediaType = "application/json")
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Внутренняя ошибка сервера",
+                            content = @Content(mediaType = "application/json")
+                    )
+            }
+    )
+    @GetMapping("/og-data")
+    public ResponseEntity<OpenGraphData> getOpenGraphDataByUrl(@RequestParam String url) {
+        try {
+            OpenGraphData openGraphData = noteService.getOpenGraphDataByUrl(url);
+            return ResponseEntity.ok(openGraphData);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
+    @PostMapping("/og-data")
+    @Operation(
+            summary = "Получить OpenGraph данные для заметки",
+            description = "Принимает массив URL и ID заметки, возвращает массив OpenGraph объектов, принадлежащих указанной заметке.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Массив OpenGraph данных успешно возвращен",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = OpenGraphData.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Заметка или OpenGraph данные не найдены",
+                            content = @Content(mediaType = "application/json")
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Внутренняя ошибка сервера",
+                            content = @Content(mediaType = "application/json")
+                    )
+            }
+    )
+    public ResponseEntity<List<OpenGraphData>> getOpenGraphDataForNote(
+            @RequestBody OpenGraphRequest request
+    ) {
+        try {
+            List<OpenGraphData> openGraphDataList = noteService.getOpenGraphDataForNote(request.getNoteId());
+//            List<OpenGraphData> openGraphDataList = noteService.getOpenGraphDataForNote(request.getNoteId(), request.getUrls());
+            return ResponseEntity.ok(openGraphDataList);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
 }
 
