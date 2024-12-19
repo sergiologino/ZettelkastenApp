@@ -48,4 +48,8 @@ logging:
           descriptor:
             sql:
               BasicBinder: TRACE
+file:
+  storage-path: ./uploaded-files
+audio:
+  storage-path: ./uploaded-audios
 

@@ -40,6 +40,9 @@ public class NoteDTO {
 
     private Long y;
 
+    private List<NoteFileDTO> files;
+    private List<NoteAudioDTO> audios;
+
 
 
 

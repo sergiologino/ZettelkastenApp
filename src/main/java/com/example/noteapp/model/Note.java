@@ -68,6 +68,12 @@ public class Note {
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OpenGraphData> openGraphData;
 
+    @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<NoteFile> files = new ArrayList<>();
+
+    @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<NoteAudio> audios = new ArrayList<>();
+
 
     // constructors
     public Note() {
@@ -184,4 +190,19 @@ public class Note {
         this.neuralNetwork = neuralNetwork;
     }
 
+    public List<NoteFile> getFiles() {
+        return files;
+    }
+
+    public void setFiles(List<NoteFile> files) {
+        this.files = files;
+    }
+
+    public List<NoteAudio> getAudios() {
+        return audios;
+    }
+
+    public void setAudios(List<NoteAudio> audios) {
+        this.audios = audios;
+    }
 }

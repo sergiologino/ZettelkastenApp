@@ -1,25 +1,27 @@
 package com.example.noteapp.service;
 
+import com.example.noteapp.dto.NoteAudioDTO;
 import com.example.noteapp.dto.NoteDTO;
+import com.example.noteapp.dto.NoteFileDTO;
 import com.example.noteapp.integration.IntegrationException;
 import com.example.noteapp.integration.IntegrationService;
 import com.example.noteapp.mapper.AbstractConverter;
 //import com.example.noteapp.mapper.NoteConverter;
-import com.example.noteapp.model.Note;
-import com.example.noteapp.model.OpenGraphData;
-import com.example.noteapp.model.Project;
-import com.example.noteapp.model.Tag;
+import com.example.noteapp.model.*;
 import com.example.noteapp.repository.NoteRepository;
 import com.example.noteapp.repository.OpenGraphDataRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,6 +31,12 @@ import org.jsoup.select.Elements;
 
 @Service
 public class NoteService {
+
+    @Value("${file.storage-path}")
+    private String fileStoragePath;
+
+    @Value("${audio.storage-path}")
+    private String audioStoragePath;
 
 
     private final NoteRepository noteRepository;
@@ -422,6 +430,56 @@ public class NoteService {
         // Получаем все OpenGraph объекты для переданных URL, связанных с заметкой
         return openGraphDataRepository.findByNoteId(noteId);
 //        return openGraphDataRepository.findByNoteIdAndUrls(noteId, urls);
+    }
+
+    @Transactional
+    public Note addFilesToNote(UUID noteId, List<NoteFileDTO> files) {
+        Note note = noteRepository.findById(noteId).orElseThrow(() -> new RuntimeException("Note not found"));
+
+        for (NoteFileDTO fileDTO : files) {
+            String serverFilePath = downloadFile(fileDTO.getFilePath(), fileStoragePath, fileDTO.getFileName());
+            NoteFile noteFile = new NoteFile();
+            noteFile.setServerFilePath(serverFilePath);
+            noteFile.setOriginalName(fileDTO.getFileName());
+            noteFile.setNote(note);
+            note.getFiles().add(noteFile);
+        }
+        return noteRepository.save(note);
+    }
+
+    @Transactional
+    public Note addAudiosToNote(UUID noteId, List<NoteAudioDTO> audios) {
+        Note note = noteRepository.findById(noteId).orElseThrow(() -> new RuntimeException("Note not found"));
+
+        for (NoteAudioDTO audioDTO : audios) {
+            String serverFilePath = downloadFile(audioDTO.getFilePath(), audioStoragePath, audioDTO.getFileName());
+            NoteAudio noteAudio = new NoteAudio();
+            noteAudio.setFilePath(serverFilePath);
+            noteAudio.setFileName(audioDTO.getFileName());
+            noteAudio.setNote(note);
+            note.getAudios().add(noteAudio);
+        }
+        return noteRepository.save(note);
+    }
+
+    private String downloadFile(String fileUrl, String storagePath, String fileName) {
+        try {
+            Path storageDirectory = Paths.get(storagePath);
+            Path destinationPath = storageDirectory.resolve(fileName);
+            Files.copy(new URL(fileUrl).openStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
+            return destinationPath.toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to download file: " + fileUrl, e);
+        }
+    }
+
+    @Transactional
+    public Note updateNoteCoordinates(UUID noteId, Long x, Long y) {
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new RuntimeException("Note not found"));
+        note.setPositionX(x);
+        note.setPositionY(y);
+        return noteRepository.save(note);
     }
 
 

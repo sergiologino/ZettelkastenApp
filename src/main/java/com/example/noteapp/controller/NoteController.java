@@ -1,6 +1,8 @@
 package com.example.noteapp.controller;
 
+import com.example.noteapp.dto.NoteAudioDTO;
 import com.example.noteapp.dto.NoteDTO;
+import com.example.noteapp.dto.NoteFileDTO;
 import com.example.noteapp.dto.OpenGraphRequest;
 import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.Note;
@@ -308,6 +310,45 @@ public class NoteController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
+    @PostMapping("/{noteId}/files")
+    public ResponseEntity<Note> uploadFilesToNote(
+            @PathVariable UUID noteId,
+            @RequestBody List<NoteFileDTO> files) {
+        Note updatedNote = noteService.addFilesToNote(noteId, files);
+        return ResponseEntity.ok(updatedNote);
+    }
+
+    @PostMapping("/{noteId}/audios")
+    public ResponseEntity<Note> uploadAudiosToNote(
+            @PathVariable UUID noteId,
+            @RequestBody List<NoteAudioDTO> audios) {
+        Note updatedNote = noteService.addAudiosToNote(noteId, audios);
+        return ResponseEntity.ok(updatedNote);
+    }
+
+    @PutMapping("/{noteId}/coordinates")
+    @Operation(summary = "Обновить координаты заметки", description = "Обновляет координаты X и Y для указанной заметки.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Координаты успешно обновлены"),
+            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
+            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
+    })
+    public ResponseEntity<NoteDTO> updateNoteCoordinates(
+            @PathVariable UUID noteId,
+            @RequestBody Map<String, Long> coordinates) {
+        try {
+            Long x = coordinates.get("x");
+            Long y = coordinates.get("y");
+
+            Note updatedNote = noteService.updateNoteCoordinates(noteId, x, y);
+            return ResponseEntity.ok(noteConverter.toDTO(updatedNote));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
 
 }
 
