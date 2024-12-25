@@ -1,5 +1,6 @@
 package com.example.noteapp.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -20,6 +21,7 @@ public class NoteAudio {
     @Column(nullable = false)
     private String originalName;
 
+    //@JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
     private Note note;
@@ -42,19 +44,19 @@ public class NoteAudio {
         this.id = id;
     }
 
-    public String getFilePath() {
+    public String getAudioFilePath() {
         return serverFilePath;
     }
 
-    public void setFilePath(String filePath) {
+    public void setAudioFilePath(String filePath) {
         this.serverFilePath = filePath;
     }
 
-    public String getFileName() {
+    public String getAudioFileName() {
         return originalName;
     }
 
-    public void setFileName(String fileName) {
+    public void setAudioFileName(String fileName) {
         this.originalName = fileName;
     }
 

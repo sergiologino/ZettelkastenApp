@@ -1,22 +1,36 @@
 package com.example.noteapp.dto;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.Value;
-
 import java.io.Serializable;
 import java.util.UUID;
 
 
-@Value
-@Getter
-@Setter
 public class NoteAudioDTO implements Serializable {
-    String filePath;
-    String fileName;
+    private UUID id;
+    private String audioName;
+    private String audioPath;
 
-    public NoteAudioDTO(String filePath, String fileName) {
-        this.filePath = filePath;
-        this.fileName = fileName;
+    // Геттеры и сеттеры
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getAudioName() {
+        return audioName;
+    }
+
+    public void setAudioName(String audioName) {
+        this.audioName = audioName;
+    }
+
+    public String getAudioPath() {
+        return audioPath;
+    }
+
+    public void setAudioPath(String audioPath) {
+        this.audioPath = audioPath;
     }
 }

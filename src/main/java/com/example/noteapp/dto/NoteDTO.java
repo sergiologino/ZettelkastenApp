@@ -40,6 +40,26 @@ public class NoteDTO {
 
     private Long y;
 
+    public List<NoteFileDTO> getFiles() {
+        return files;
+    }
+
+    public void setFiles(List<NoteFileDTO> files) {
+        this.files = files;
+    }
+
+    public List<NoteAudioDTO> getAudios() {
+        return audios;
+    }
+
+    public void setAudios(List<NoteAudioDTO> audios) {
+        this.audios = audios;
+    }
+
+    public void setUrls(List<String> urls) {
+        this.urls = urls;
+    }
+
     private List<NoteFileDTO> files;
     private List<NoteAudioDTO> audios;
 

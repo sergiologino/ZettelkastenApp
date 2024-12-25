@@ -69,26 +69,19 @@ public class NoteController {
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
     @PutMapping
-    public NoteDTO updateNote(@RequestBody NoteDTO noteDTO ) {
+    public Note updateNote(@RequestBody NoteDTO noteDTO ) {
 
        noteDTO.setNeuralNetwork("YandexGPT-Lite");
        noteDTO.setAnalyze(true);
 
-       Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDTO.getUrls());
-       noteDTO.setOpenGraphData(openGraphData);
-
-// Получаем список OpenGraphData для заметки
-        List<OpenGraphData> openGraphDataList = noteService.getOpenGraphDataForNote(noteDTO.getId());
-
-        // Преобразуем список OpenGraphData в карту, где ключ - URL
-        Map<String, OpenGraphData> openGraphDataMap = openGraphDataList.stream()
-                .collect(Collectors.toMap(OpenGraphData::getUrl, data -> data));
-        System.out.println(openGraphDataMap);
-
-        // Добавляем OpenGraphData в NoteDTO
-        noteDTO.setOpenGraphData(openGraphDataMap);
-
-        return noteDTO;
+       List<String> urls=noteDTO.getUrls();
+       Note note=noteService.getNoteById(noteDTO.getId());
+       note.setContent(noteDTO.getContent());
+//       note.setFiles(noteDTO.getFiles());
+       noteService.updateNote(note,urls);
+//       Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDTO.getUrls());
+//       noteDTO.setOpenGraphData(openGraphData);
+       return note;
     }
 
     @Operation(summary = "Создать новую заметку", description = "Создает новую заметку. Может содержать текст, файл или голосовой файл.")
@@ -103,7 +96,7 @@ public class NoteController {
 
     @PostMapping("/{projectId}")
     public ResponseEntity<?> createNote(@PathVariable UUID projectId, @RequestBody NoteDTO noteDto) {
-        System.out.println("Полученные данные: content:" + noteDto.getContent()+" note: "+noteDto.toString());
+
         noteDto.setProjectId(projectId);
         try {            // Проверяем, что поле content не пустое
             if (noteDto.getContent() == null || noteDto.getContent().trim().isEmpty()) {
@@ -120,11 +113,11 @@ public class NoteController {
             noteDto.setAnalyze(true);
 
 //
-            if (noteDto.getUrl() != null && !noteDto.getUrl().isEmpty()) {
-                // Обрабатываем ссылки и получаем Open Graph данные
-                Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDto.getUrl());
-                noteDto.setOpenGraphData(openGraphData);
-            }
+//            if (noteDto.getUrl() != null && !noteDto.getUrl().isEmpty()) {
+//                // Обрабатываем ссылки и получаем Open Graph данные
+//                Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDto.getUrl());
+//                noteDto.setOpenGraphData(openGraphData);
+//            }
             Note savedNote = noteService.createNote(noteConverter.toEntity(noteDto), noteDto.getUrls());
             NoteDTO newNoteDTO = noteConverter.toDTO(savedNote);
 
@@ -150,34 +143,34 @@ public class NoteController {
 
 
 
-    @Operation(summary = "Добавить файл к заметке", description = "Позволяет прикрепить файл к существующей заметке.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Файл успешно добавлен"),
-            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
-            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
-    })
-    @PutMapping("/{noteId}/upload")
-    public Note uploadFileToNote(
-            @PathVariable UUID noteId,
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(required = false) String neuralNetwork
-    ) {
-        return noteService.addFileToNote(noteId, file, neuralNetwork);
-    }
-
-    @Operation(summary = "Загрузить звуковой файл к заметке", description = "Позволяет прикрепить звуковой файл к заметке.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Файл успешно добавлен"),
-            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
-            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
-    })
-    @PutMapping("/{noteId}/uploadAudio")
-    public Note uploadAudioToNote(
-            @PathVariable UUID noteId,
-            @RequestParam("file") MultipartFile file
-    ) {
-        return noteService.addAudioToNote(noteId, file);
-    }
+//    @Operation(summary = "Добавить файл к заметке", description = "Позволяет прикрепить файл к существующей заметке.")
+//    @ApiResponses(value = {
+//            @ApiResponse(responseCode = "200", description = "Файл успешно добавлен"),
+//            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
+//            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
+//    })
+//    @PutMapping("/{noteId}/upload")
+//    public Note uploadFileToNote(
+//            @PathVariable UUID noteId,
+//            @RequestParam("file") MultipartFile file,
+//            @RequestParam(required = false) String neuralNetwork
+//    ) {
+//        return noteService.addFileToNote(noteId, file, neuralNetwork);
+//    }
+//
+//    @Operation(summary = "Загрузить звуковой файл к заметке", description = "Позволяет прикрепить звуковой файл к заметке.")
+//    @ApiResponses(value = {
+//            @ApiResponse(responseCode = "200", description = "Файл успешно добавлен"),
+//            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
+//            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
+//    })
+//    @PutMapping("/{noteId}/uploadAudio")
+//    public Note uploadAudioToNote(
+//            @PathVariable UUID noteId,
+//            @RequestParam("file") MultipartFile file
+//    ) {
+//        return noteService.addAudioToNote(noteId, file);
+//    }
 
 
 
@@ -218,6 +211,7 @@ public class NoteController {
     @GetMapping("/{projectId}/notes")
     public List<NoteDTO> getNotesByProject(@PathVariable UUID projectId) {
         List<Note> notes = noteService.getNotesByProjectId(projectId);
+
 
         return notes.stream()
                 .map(note -> {
@@ -313,7 +307,7 @@ public class NoteController {
     @PostMapping("/{noteId}/files")
     public ResponseEntity<Note> uploadFilesToNote(
             @PathVariable UUID noteId,
-            @RequestBody List<NoteFileDTO> files) {
+            @RequestParam("files") List<MultipartFile> files) {
         Note updatedNote = noteService.addFilesToNote(noteId, files);
         return ResponseEntity.ok(updatedNote);
     }
@@ -321,7 +315,7 @@ public class NoteController {
     @PostMapping("/{noteId}/audios")
     public ResponseEntity<Note> uploadAudiosToNote(
             @PathVariable UUID noteId,
-            @RequestBody List<NoteAudioDTO> audios) {
+            @RequestParam("audios") List<MultipartFile> audios) {
         Note updatedNote = noteService.addAudiosToNote(noteId, audios);
         return ResponseEntity.ok(updatedNote);
     }

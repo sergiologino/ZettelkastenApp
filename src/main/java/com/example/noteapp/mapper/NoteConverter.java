@@ -2,12 +2,15 @@ package com.example.noteapp.mapper;
 
 import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.model.Note;
+import com.example.noteapp.model.NoteAudio;
+import com.example.noteapp.model.NoteFile;
 import com.example.noteapp.model.OpenGraphData;
 import com.example.noteapp.service.NoteService;
 import com.example.noteapp.service.ProjectService;
 import com.example.noteapp.service.TagService;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,13 +20,17 @@ public class NoteConverter extends AbstractConverter {
     private final ProjectService projectService;
     private final TagService tagService;
     private final NoteService noteService;
+    private final NoteFileConverter noteFileConverter;
+    private final NoteAudioConverter noteAudioConverter;
 
 
-    public NoteConverter(ProjectService projectService, TagService tagService, NoteService noteService) {
+    public NoteConverter(ProjectService projectService, TagService tagService, NoteService noteService, NoteFileConverter noteFileConverter, NoteAudioConverter noteAudioConverter) {
         super();
         this.projectService = projectService;
         this.tagService = tagService;
         this.noteService = noteService;
+        this.noteFileConverter = noteFileConverter;
+        this.noteAudioConverter = noteAudioConverter;
     }
 
     @Override
@@ -62,6 +69,15 @@ public class NoteConverter extends AbstractConverter {
                 note.setOpenGraphData(openGraphDataList);
             }
 
+            note.setFiles(dto.getFiles().stream()
+                    .map(noteFileConverter::toEntity)
+                    .collect(Collectors.toList()));
+            note.setAudios(dto.getAudios().stream()
+                    .map(noteAudioConverter::toEntity)
+                    .collect(Collectors.toList()));
+
+
+
             return note;
         }
     }
@@ -93,8 +109,17 @@ public class NoteConverter extends AbstractConverter {
                 newNoteDTO.setOpenGraphData(openGraphDataMap);
             }
 
+            newNoteDTO.setFiles(note.getFiles().stream()
+                    .map(noteFileConverter::toDTO)
+                    .collect(Collectors.toList()));
+            newNoteDTO.setAudios(note.getAudios().stream()
+                    .map(noteAudioConverter::toDTO)
+                    .collect(Collectors.toList()));
             return newNoteDTO;
         }
+
+
     }
 }
+
 

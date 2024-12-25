@@ -9,7 +9,7 @@ import java.util.Map;
 public class TelegramService {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final String botToken = "***********";
+    private final String botToken = "${telegram.bot.token}";
 
     public void sendMessage(String chatId, String message) {
         String url = "https://api.telegram.org/bot" + botToken + "/sendMessage";

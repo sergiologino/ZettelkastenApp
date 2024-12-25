@@ -23,5 +23,8 @@ public interface OpenGraphDataRepository extends JpaRepository<OpenGraphData, UU
     @Query("SELECT og FROM OpenGraphData og WHERE og.note.id = :noteId")
     List<OpenGraphData> findByNoteId(@Param("noteId") UUID noteId);
 
+    @Query("SELECT og FROM OpenGraphData og WHERE og.url = :url AND og.note.id = :noteId")
+    Optional<OpenGraphData> findByUrlAndNoteId(@Param("url") String url, @Param("noteId") UUID noteId);
+
 
 }

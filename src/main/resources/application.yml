@@ -19,6 +19,12 @@ spring:
       name: admin
       password: admin123
       enabled: false
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 200MB
+      max-request-size: 250MB
+
 
 springdoc:
   api-docs:
@@ -49,7 +55,9 @@ logging:
             sql:
               BasicBinder: TRACE
 file:
-  storage-path: ./uploaded-files
+  storage-path: /Users/savki/uploaded/uploaded-files
 audio:
-  storage-path: ./uploaded-audios
+  storage-path: /Users/savki/uploaded/uploaded-audios
+open-graph-data:
+  enabled: false
 

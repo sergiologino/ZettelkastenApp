@@ -1,5 +1,6 @@
 package com.example.noteapp.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.util.UUID;
@@ -17,6 +18,7 @@ public class NoteFile {
     @Column(nullable = false)
     private String originalName;
 
+    //@JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
     private Note note;
@@ -24,7 +26,7 @@ public class NoteFile {
     public NoteFile() {
     }
 
-    public NoteFile(UUID id, String filePath, String fileName, String fileType, Note note) {
+    public NoteFile(UUID id, String filePath, String fileName, Note note) {
         this.id = id;
         this.serverFilePath = filePath;
         this.originalName = fileName;

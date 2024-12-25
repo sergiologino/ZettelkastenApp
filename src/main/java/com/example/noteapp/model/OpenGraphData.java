@@ -2,12 +2,16 @@ package com.example.noteapp.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.Setter;
+
 import java.util.UUID;
 
 @Entity
-@Table(name = "open_graph_data")
+@Table(name = "open_graph_data", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"note_id", "url"})})
 public class OpenGraphData {
 
+    @Setter
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
@@ -15,10 +19,14 @@ public class OpenGraphData {
     @Column(nullable = false)
     private String url;
 
+    @Setter
     private String title;
+    @Setter
     private String description;
+    @Setter
     private String image;
 
+    @Setter
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
@@ -29,47 +37,28 @@ public class OpenGraphData {
         return id;
     }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
     public String getUrl() {
         return url;
     }
 
-    public void setUrl(String url) {
-        this.url = url;
+    public void setUrl(Object url) {
+        this.url = url.toString();
     }
 
     public String getTitle() {
         return title;
     }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
     public String getDescription() {
         return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public String getImage() {
         return image;
     }
 
-    public void setImage(String image) {
-        this.image = image;
-    }
-
     public Note getNote() {
         return note;
     }
 
-    public void setNote(Note note) {
-        this.note = note;
-    }
 }

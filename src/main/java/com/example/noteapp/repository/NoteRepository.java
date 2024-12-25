@@ -15,5 +15,8 @@ public interface NoteRepository extends JpaRepository<Note, UUID> {
     @Query("SELECT n.tags FROM Note n WHERE n.id = :noteId")
     List<Tag> findTagsByNoteId(@Param("noteId") UUID noteId);
 
+    @Query("SELECT n FROM Note n LEFT JOIN FETCH n.files LEFT JOIN FETCH n.audios WHERE n.project.id = :projectId")
+    List<Note> findAllByProjectIdWithFilesAndAudios(@Param("projectId") UUID projectId);
+
 
 }

@@ -66,7 +66,7 @@ public class Note {
     private Long positionY;
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OpenGraphData> openGraphData;
+    private List<OpenGraphData> openGraphData = new ArrayList<>();;
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<NoteFile> files = new ArrayList<>();
