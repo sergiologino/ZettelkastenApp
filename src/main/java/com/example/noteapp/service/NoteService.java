@@ -391,10 +391,14 @@ public class NoteService {
     }
 
     public List<Note> getNotesByProjectId(UUID projectId) {
-        List<Note> foundedNotes = noteRepository.findAllByProjectIdWithFilesAndAudios(projectId);
+        List<Note> foundedNotes = noteRepository.findAllByProjectId(projectId);
 //        for (Note note : foundedNotes) {
 //            note.setProject(projectService.getProjectById(note.getProject().getId()));
 //        }
+        for (Note note : foundedNotes) {
+            note.setAudios(noteRepository.findAudiosByNoteId(note.getId()));
+            note.setFiles(noteRepository.findFilesByNoteId(note.getId()));
+        }
         return foundedNotes;
     }
 
