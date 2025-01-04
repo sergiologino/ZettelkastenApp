@@ -9,26 +9,26 @@ public class NoteFileDTO implements Serializable {
 
     UUID id;
 
-    String filePath;
+    String url;
 
-    String fileName;
+    String name;
 
-    public NoteFileDTO(UUID id, String filePath, String fileName) {
+    public NoteFileDTO(UUID id, String url, String name) {
         this.id = id;
-        this.filePath = filePath;
-        this.fileName = fileName;
+        this.url = url;
+        this.name = name;
     }
 
     public NoteFileDTO() {
     }
 
 
-    public void setFileName(String fileName) {
-            this.fileName = fileName;
+    public void setFileName(String name) {
+            this.name = name;
         }
 
-    public void setFilePath(String filePath) {
-            this.filePath = filePath;
+    public void setFilePath(String url) {
+            this.url = url;
         }
 
     public UUID getId() {
@@ -40,10 +40,10 @@ public class NoteFileDTO implements Serializable {
     }
 
     public String getFilePath() {
-        return filePath;
+        return url;
     }
 
     public String getFileName() {
-        return fileName;
+        return name;
     }
 }

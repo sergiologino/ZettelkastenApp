@@ -76,9 +76,8 @@ public class NoteController {
 
        List<String> urls=noteDTO.getUrls();
        Note note=noteService.getNoteById(noteDTO.getId());
-       note.setContent(noteDTO.getContent());
-//       note.setFiles(noteDTO.getFiles());
-       noteService.updateNote(note,urls);
+
+       noteService.updateNote(noteConverter.toEntity(noteDTO),urls);
 //       Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDTO.getUrls());
 //       noteDTO.setOpenGraphData(openGraphData);
        return note;

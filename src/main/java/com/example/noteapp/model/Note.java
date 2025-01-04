@@ -1,6 +1,7 @@
 package com.example.noteapp.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
@@ -35,7 +36,7 @@ public class Note {
     @JsonIgnore
     @NotNull(message = "Проект обязателен.")
     @ManyToOne
-    @JoinColumn(name = "project_id")
+    @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
     @ManyToMany(cascade = CascadeType.ALL)
@@ -66,6 +67,7 @@ public class Note {
     private Long positionY;
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<OpenGraphData> openGraphData = new ArrayList<>();;
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)

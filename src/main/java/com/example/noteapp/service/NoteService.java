@@ -209,17 +209,30 @@ public class NoteService {
         boolean useOpenGraph = openGraphDataEnabled;
         if (useOpenGraph) {
             if (links != null && !links.isEmpty()) {
+                // Получаем текущую коллекцию
                 List<OpenGraphData> existingData = openGraphDataRepository.findByNoteId(note.getId());
-                List<OpenGraphData> newData = links.stream()
-                        .filter(link -> existingData.stream().noneMatch(data -> data.getUrl().equals(link)))
-                        .map(link -> fetchOpenGraphData(link, note))
-                        .filter(Objects::nonNull) // Игнорируем ошибки получения данных
+
+                // Удаляем существующие элементы, которые не соответствуют новым ссылкам
+                existingData.removeIf(data -> !links.contains(data.getUrl()));
+
+                // Добавляем новые OpenGraph данные
+                List<String> existingUrls = existingData.stream()
+                        .map(OpenGraphData::getUrl)
                         .collect(Collectors.toList());
+                links.stream()
+                        .filter(link -> !existingUrls.contains(link))
+                        .map(link -> fetchOpenGraphData(link, note))
+                        .filter(Objects::nonNull)
+                        .forEach(existingData::add); // Добавляем в существующую коллекцию
 
-                existingData.addAll(newData);
+                System.out.println("existingData содержит: " + existingData); // проверяем что получилось в existingData
 
-                openGraphDataRepository.saveAll(newData);
-                note.setOpenGraphData(newData);
+                // Добавляем данные в объект Note
+                note.getOpenGraphData().addAll(existingData);
+
+                // Сохраняем данные в базу через репозиторий
+                openGraphDataRepository.saveAll(existingData);
+
             }
         }
         noteRepository.save(note);
@@ -231,7 +244,6 @@ public class NoteService {
 
     @Transactional
     public Note createNote(Note note, List<String> links){
-
 //
         if (note.getProject() == null || note.getProject().getId() == null) {
             note.setProject(projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3")));
@@ -239,28 +251,45 @@ public class NoteService {
             //throw new IllegalArgumentException("Проект обязателен для создания заметки.");
         }
         noteRepository.save(note);
-
         // Обрабатываем ссылки и сохраняем Open Graph данные
         boolean useOpenGraph = openGraphDataEnabled;
         if (useOpenGraph) {
             if (links != null && !links.isEmpty()) {
+                // Получаем текущую коллекцию
                 List<OpenGraphData> existingData = openGraphDataRepository.findByNoteId(note.getId());
-                List<OpenGraphData> newData = links.stream()
-                        .filter(link -> existingData.stream().noneMatch(data -> data.getUrl().equals(link)))
-                        .map(link -> fetchOpenGraphData(link, note))
-                        .filter(Objects::nonNull) // Игнорируем ошибки получения данных
+
+                // Удаляем существующие элементы, которые не соответствуют новым ссылкам
+                existingData.removeIf(data -> !links.contains(data.getUrl()));
+
+                // Добавляем новые OpenGraph данные
+                List<String> existingUrls = existingData.stream()
+                        .map(OpenGraphData::getUrl)
                         .collect(Collectors.toList());
+                links.stream()
+                        .filter(link -> !existingUrls.contains(link))
+                        .map(link -> fetchOpenGraphData(link, note))
+                        .filter(Objects::nonNull)
+                        .forEach(existingData::add); // Добавляем в существующую коллекцию
 
-                existingData.addAll(newData);
+                System.out.println("existingData содержит: " + existingData); // проверяем что получилось в existingData
 
-                openGraphDataRepository.saveAll(newData);
-                note.setOpenGraphData(newData);
+                // Добавляем данные в объект Note
+                note.getOpenGraphData().addAll(existingData);
+
+                // Сохраняем данные в базу через репозиторий
+                openGraphDataRepository.saveAll(existingData);
+
             }
+
+
+            System.out.println("OpenGraphData после обработки: " + note.getOpenGraphData());
+            return noteRepository.save(note);
+
         }
-        noteRepository.save(note);
+        return note;
+
 
         //TODO временно, чтобы не отправлять на анализ, потом убрать, правильная есть в конце метода
-        return note;
         // Отправляем на анализ
 //        if (note.isAnalyze()) {
 //            try {
@@ -283,6 +312,8 @@ public class NoteService {
 //        return note;
     }
 
+
+
     private OpenGraphData fetchOpenGraphData(String url, Note note) {
         try {
             Document document = Jsoup.connect(url).get();
@@ -296,8 +327,32 @@ public class NoteService {
             return ogData;
         } catch (IOException e) {
             System.err.println("Ошибка при обработке Open Graph: " + url);
+            e.printStackTrace(); // Добавлено для отладки
             return null;
         }
+    }
+
+    public Map<String, OpenGraphData> processOpenGraphData(List<String> links) {
+        Map<String, OpenGraphData> openGraphDataMap = new HashMap<>();
+
+        for (String link : links) {
+            try {
+                Document document = Jsoup.connect(link).get();
+                OpenGraphData ogData = new OpenGraphData();
+
+                ogData.setTitle(getMetaTagContent(document, "og:title"));
+                ogData.setDescription(getMetaTagContent(document, "og:description"));
+                ogData.setImage(getMetaTagContent(document, "og:image"));
+                ogData.setUrl(link);
+
+                openGraphDataMap.put(link, ogData);
+            } catch (IOException e) {
+                // Логируем ошибку, если невозможно обработать ссылку
+                System.err.println("Ошибка при обработке ссылки: " + link + " - " + e.getMessage());
+            }
+        }
+
+        return openGraphDataMap;
     }
 
     private String getMetaTagContent(Document document, String metaName) {
@@ -413,28 +468,7 @@ public class NoteService {
         return tagList;
     }
 
-    public Map<String, OpenGraphData> processOpenGraphData(List<String> links) {
-        Map<String, OpenGraphData> openGraphDataMap = new HashMap<>();
 
-        for (String link : links) {
-            try {
-                Document document = Jsoup.connect(link).get();
-                OpenGraphData ogData = new OpenGraphData();
-
-                ogData.setTitle(getMetaTagContent(document, "og:title"));
-                ogData.setDescription(getMetaTagContent(document, "og:description"));
-                ogData.setImage(getMetaTagContent(document, "og:image"));
-                ogData.setUrl(link);
-
-                openGraphDataMap.put(link, ogData);
-            } catch (IOException e) {
-                // Логируем ошибку, если невозможно обработать ссылку
-                System.err.println("Ошибка при обработке ссылки: " + link + " - " + e.getMessage());
-            }
-        }
-
-        return openGraphDataMap;
-    }
 
     public List<String> getUrlsByNoteId (Note note){
         return openGraphDataRepository.findUrlsByNoteId(note.getId());
@@ -540,19 +574,21 @@ public class NoteService {
 
 
                 // Сохранение информации о файле
-                note.setFilePath(filePath.toString()); // Можно расширить для работы с несколькими файлами
-                note.setFileType(detectFileType(originalFileName));
+//                note.setFilePath(filePath.toString()); // Можно расширить для работы с несколькими файлами
+//                note.setFileType(detectFileType(originalFileName));
 
                 NoteAudio newNoteAudioFile = new NoteAudio();
-                newNoteAudioFile.setAudioFileName(originalFileName);
+                newNoteAudioFile.setAudioFileName(originalFileName+".mp3");
                 newNoteAudioFile.setAudioFilePath(filePath.toString());
                 newNoteAudioFile.setNote(note);
                 noteRepository.save(note);
 
 
                 List<NoteAudio> newAudioFileList = note.getAudios();
+
+                // TODO перенести за пределы цикла, переделать сбор аудио
                 newAudioFileList.add(newNoteAudioFile);
-                note.setAudios(newAudioFileList);
+
 
 
 
@@ -560,6 +596,7 @@ public class NoteService {
                 throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
             }
         }
+
         return noteRepository.save(note);
     }
 

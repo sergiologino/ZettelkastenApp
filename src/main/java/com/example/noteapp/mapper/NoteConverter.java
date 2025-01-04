@@ -68,13 +68,13 @@ public class NoteConverter extends AbstractConverter {
                         .collect(Collectors.toList());
                 note.setOpenGraphData(openGraphDataList);
             }
-
-            note.setFiles(dto.getFiles().stream()
-                    .map(noteFileConverter::toEntity)
-                    .collect(Collectors.toList()));
-            note.setAudios(dto.getAudios().stream()
-                    .map(noteAudioConverter::toEntity)
-                    .collect(Collectors.toList()));
+//TODO снять комментарий после преобразования audios и files в массив на фронте
+//            note.setFiles(dto.getFiles().stream()
+//                    .map(noteFileConverter::toEntity)
+//                    .collect(Collectors.toList()));
+//            note.setAudios(dto.getAudios().stream()
+//                    .map(noteAudioConverter::toEntity)
+//                    .collect(Collectors.toList()));
 
 
 

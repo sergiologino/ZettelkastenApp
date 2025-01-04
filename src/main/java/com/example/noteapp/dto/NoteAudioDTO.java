@@ -6,8 +6,8 @@ import java.util.UUID;
 
 public class NoteAudioDTO implements Serializable {
     private UUID id;
-    private String audioName;
-    private String audioPath;
+    private String name;
+    private String url;
 
     // Геттеры и сеттеры
     public UUID getId() {
@@ -19,18 +19,18 @@ public class NoteAudioDTO implements Serializable {
     }
 
     public String getAudioName() {
-        return audioName;
+        return name;
     }
 
-    public void setAudioName(String audioName) {
-        this.audioName = audioName;
+    public void setAudioName(String name) {
+        this.name = name;
     }
 
     public String getAudioPath() {
-        return audioPath;
+        return url;
     }
 
-    public void setAudioPath(String audioPath) {
-        this.audioPath = audioPath;
+    public void setAudioPath(String url) {
+        this.url = url;
     }
 }

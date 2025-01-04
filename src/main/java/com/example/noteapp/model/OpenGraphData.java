@@ -1,5 +1,6 @@
 package com.example.noteapp.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Setter;
@@ -30,6 +31,7 @@ public class OpenGraphData {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
+    @JsonBackReference
     private Note note;
 
     // Геттеры и сеттеры
