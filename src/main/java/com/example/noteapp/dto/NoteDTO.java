@@ -3,6 +3,7 @@ package com.example.noteapp.dto;
 
 import com.example.noteapp.model.OpenGraphData;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -40,50 +41,11 @@ public class NoteDTO {
 
     private Long y;
 
+    private List<NoteFileDTO> files;
 
+    private List<NoteAudioDTO> audios;
 
-
-//    public static class OpenGraphData {
-//        private String title;
-//        private String description;
-//        private String image;
-//        private String url;
-//
-//        // Геттеры и сеттеры
-//        public String getTitle() {
-//            return title;
-//        }
-//
-//        public void setTitle(String title) {
-//            this.title = title;
-//        }
-//
-//        public String getDescription() {
-//            return description;
-//        }
-//
-//        public void setDescription(String description) {
-//            this.description = description;
-//        }
-//
-//        public String getImage() {
-//            return image;
-//        }
-//
-//        public void setImage(String image) {
-//            this.image = image;
-//        }
-//
-//        public String getUrl() {
-//            return url;
-//        }
-//
-//        public void setUrl(String url) {
-//            this.url = url;
-//        }
-//    }
-
-
+   private Map<String, OpenGraphData> openGraphData; // Данные Open Graph
 
     public NoteDTO() {}
 
@@ -103,13 +65,36 @@ public class NoteDTO {
         this.neuralNetwork = neuralNetwork;
         this.x = x;
         this.y = y;
+        this.files = new ArrayList<>();
+        this.audios = new ArrayList<>();
+
+    }
+
+    public List<NoteFileDTO> getFiles() {
+        return files;
+    }
+
+    public void setFiles(List<NoteFileDTO> files) {
+        this.files = files;
+    }
+
+    public List<NoteAudioDTO> getAudios() {
+        return audios;
+    }
+
+    public void setAudios(List<NoteAudioDTO> audios) {
+        this.audios = audios;
+    }
+
+    public void setUrls(List<String> urls) {
+        this.urls = urls;
     }
 
     public Map<String, OpenGraphData> getOpenGraphData() { return openGraphData; }
 
     public void setOpenGraphData(Map<String, OpenGraphData> openGraphData) { this.openGraphData = openGraphData; }
 
-    private Map<String, OpenGraphData> openGraphData; // Данные Open Graph
+
 
     public List<String> getUrls() {
         return urls;

@@ -1,25 +1,27 @@
 package com.example.noteapp.service;
 
+import com.example.noteapp.dto.NoteAudioDTO;
 import com.example.noteapp.dto.NoteDTO;
+import com.example.noteapp.dto.NoteFileDTO;
 import com.example.noteapp.integration.IntegrationException;
 import com.example.noteapp.integration.IntegrationService;
 import com.example.noteapp.mapper.AbstractConverter;
-import com.example.noteapp.mapper.NoteConverter;
-import com.example.noteapp.model.Note;
-import com.example.noteapp.model.OpenGraphData;
-import com.example.noteapp.model.Project;
-import com.example.noteapp.model.Tag;
+//import com.example.noteapp.mapper.NoteConverter;
+import com.example.noteapp.model.*;
 import com.example.noteapp.repository.NoteRepository;
 import com.example.noteapp.repository.OpenGraphDataRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,24 +32,35 @@ import org.jsoup.select.Elements;
 @Service
 public class NoteService {
 
-    private final AbstractConverter converter;
+    @Value("${file.storage-path}")
+    private String fileStoragePath;
+
+    @Value("${audio.storage-path}")
+    private String audioStoragePath;
+
+    @Value("${open-graph-data.enabled}")
+    private boolean openGraphDataEnabled;
+
+
     private final NoteRepository noteRepository;
     private final TagService tagService;
     private final IntegrationService integrationService;
     private final TelegramService telegramService;
     private final ProjectService projectService;
-    private final NoteConverter noteConverter;
+  //  private final NoteConverter noteConverter;
     private final OpenGraphDataRepository openGraphDataRepository;
+    private final String filePath = "${file.storage-path}";
+    private final String audioFilePath = "${audio.storage-path}";
 
 
-    public NoteService(AbstractConverter converter, NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, NoteConverter noteConverter, OpenGraphDataRepository openGraphDataRepository) {
-        this.converter = converter;
+    public NoteService( NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, OpenGraphDataRepository openGraphDataRepository) {
+
         this.noteRepository = noteRepository;
         this.tagService = tagService;
         this.integrationService = integrationService;
         this.telegramService = telegramService;
         this.projectService = projectService;
-        this.noteConverter = noteConverter;
+       // this.noteConverter = noteConverter;
         this.openGraphDataRepository = openGraphDataRepository;
     }
 
@@ -189,51 +202,117 @@ public class NoteService {
     }
 
     @Transactional
-    public Note updateNote(NoteDTO note){
-        return noteRepository.save(noteConverter.toEntity(note));
+    public Note updateNote(Note note, List<String> links) {
+//        Note existedNote = noteRepository.findById(note.getId()).orElseThrow(() -> new RuntimeException("Note not found"));
+//        List<OpenGraphData> existingData = note.getOpenGraphData() != null ? note.getOpenGraphData() : new ArrayList<>();
+
+        boolean useOpenGraph = openGraphDataEnabled;
+        if (useOpenGraph) {
+            if (links != null && !links.isEmpty()) {
+                // Получаем текущую коллекцию
+                List<OpenGraphData> existingData = openGraphDataRepository.findByNoteId(note.getId());
+
+                // Удаляем существующие элементы, которые не соответствуют новым ссылкам
+                existingData.removeIf(data -> !links.contains(data.getUrl()));
+
+                // Добавляем новые OpenGraph данные
+                List<String> existingUrls = existingData.stream()
+                        .map(OpenGraphData::getUrl)
+                        .collect(Collectors.toList());
+                links.stream()
+                        .filter(link -> !existingUrls.contains(link))
+                        .map(link -> fetchOpenGraphData(link, note))
+                        .filter(Objects::nonNull)
+                        .forEach(existingData::add); // Добавляем в существующую коллекцию
+
+                System.out.println("existingData содержит: " + existingData); // проверяем что получилось в existingData
+
+                // Добавляем данные в объект Note
+                note.getOpenGraphData().addAll(existingData);
+
+                // Сохраняем данные в базу через репозиторий
+                openGraphDataRepository.saveAll(existingData);
+
+            }
+        }
+        noteRepository.save(note);
+
+        return note;
+
     }
+
 
     @Transactional
     public Note createNote(Note note, List<String> links){
-
-        if (note.getUrl() != null && note.getFilePath() != null) {
-//            note.setFilePath(fileUrl);
-//            note.setFileType(detectFileType(fileName));
-        }
+//
         if (note.getProject() == null || note.getProject().getId() == null) {
             note.setProject(projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3")));
-            note.setContent(note.getContent()+" проект добавлен вручную в сервисном методе createNote");
+            note.setContent(note.getContent()+" проект добавлен костылем в createNote");
             //throw new IllegalArgumentException("Проект обязателен для создания заметки.");
         }
         noteRepository.save(note);
         // Обрабатываем ссылки и сохраняем Open Graph данные
-        List<OpenGraphData> openGraphDataList = links.stream()
-                .map(link -> fetchOpenGraphData(link, note))
-                .collect(Collectors.toList());
+        boolean useOpenGraph = openGraphDataEnabled;
+        if (useOpenGraph) {
+            if (links != null && !links.isEmpty()) {
+                // Получаем текущую коллекцию
+                List<OpenGraphData> existingData = openGraphDataRepository.findByNoteId(note.getId());
 
-        openGraphDataRepository.saveAll(openGraphDataList);
-        System.out.println("body of note entity: " + note);
-        // Отправляем на анализ
-        if (note.isAnalyze()) {
-            try {
-                List<String> tags = integrationService.analyzeNoteContent(note);
-                // Присваиваем автоматически сгенерированные теги
-                for (String tagName : tags) {
-                    Tag tag = tagService.createTag(tagName, true);
-                    if (!note.getTags().contains(tag)) { // Избегаем дублирования тегов
-                        note.getTags().add(tag);
-                    }
-                }
-            } catch (Exception e) {
-                // Логируем ошибку, но не прерываем процесс
-                System.err.println("Ошибка при анализе заметки: " + e.getMessage());
-                noteRepository.save(note);
+                // Удаляем существующие элементы, которые не соответствуют новым ссылкам
+                existingData.removeIf(data -> !links.contains(data.getUrl()));
 
+                // Добавляем новые OpenGraph данные
+                List<String> existingUrls = existingData.stream()
+                        .map(OpenGraphData::getUrl)
+                        .collect(Collectors.toList());
+                links.stream()
+                        .filter(link -> !existingUrls.contains(link))
+                        .map(link -> fetchOpenGraphData(link, note))
+                        .filter(Objects::nonNull)
+                        .forEach(existingData::add); // Добавляем в существующую коллекцию
+
+                System.out.println("existingData содержит: " + existingData); // проверяем что получилось в existingData
+
+                // Добавляем данные в объект Note
+                note.getOpenGraphData().addAll(existingData);
+
+                // Сохраняем данные в базу через репозиторий
+                openGraphDataRepository.saveAll(existingData);
 
             }
+
+
+            System.out.println("OpenGraphData после обработки: " + note.getOpenGraphData());
+            return noteRepository.save(note);
+
         }
         return note;
+
+
+        //TODO временно, чтобы не отправлять на анализ, потом убрать, правильная есть в конце метода
+        // Отправляем на анализ
+//        if (note.isAnalyze()) {
+//            try {
+//                List<String> tags = integrationService.analyzeNoteContent(note);
+//                // Присваиваем автоматически сгенерированные теги
+//                for (String tagName : tags) {
+//                    Tag tag = tagService.createTag(tagName, true);
+//                    if (!note.getTags().contains(tag)) { // Избегаем дублирования тегов
+//                        note.getTags().add(tag);
+//                    }
+//                }
+//            } catch (Exception e) {
+//                // Логируем ошибку, но не прерываем процесс
+//                System.err.println("Ошибка при анализе заметки: " + e.getMessage());
+//                noteRepository.save(note);
+//
+//
+//            }
+//        }
+//        return note;
     }
+
+
 
     private OpenGraphData fetchOpenGraphData(String url, Note note) {
         try {
@@ -244,11 +323,36 @@ public class NoteService {
             ogData.setDescription(getMetaTagContent(document, "og:description"));
             ogData.setImage(getMetaTagContent(document, "og:image"));
             ogData.setNote(note);
+            System.err.println("graphData:"+ogData);
             return ogData;
         } catch (IOException e) {
             System.err.println("Ошибка при обработке Open Graph: " + url);
+            e.printStackTrace(); // Добавлено для отладки
             return null;
         }
+    }
+
+    public Map<String, OpenGraphData> processOpenGraphData(List<String> links) {
+        Map<String, OpenGraphData> openGraphDataMap = new HashMap<>();
+
+        for (String link : links) {
+            try {
+                Document document = Jsoup.connect(link).get();
+                OpenGraphData ogData = new OpenGraphData();
+
+                ogData.setTitle(getMetaTagContent(document, "og:title"));
+                ogData.setDescription(getMetaTagContent(document, "og:description"));
+                ogData.setImage(getMetaTagContent(document, "og:image"));
+                ogData.setUrl(link);
+
+                openGraphDataMap.put(link, ogData);
+            } catch (IOException e) {
+                // Логируем ошибку, если невозможно обработать ссылку
+                System.err.println("Ошибка при обработке ссылки: " + link + " - " + e.getMessage());
+            }
+        }
+
+        return openGraphDataMap;
     }
 
     private String getMetaTagContent(Document document, String metaName) {
@@ -343,8 +447,12 @@ public class NoteService {
 
     public List<Note> getNotesByProjectId(UUID projectId) {
         List<Note> foundedNotes = noteRepository.findAllByProjectId(projectId);
+//        for (Note note : foundedNotes) {
+//            note.setProject(projectService.getProjectById(note.getProject().getId()));
+//        }
         for (Note note : foundedNotes) {
-            note.setProject(projectService.getProjectById(note.getProject().getId()));
+            note.setAudios(noteRepository.findAudiosByNoteId(note.getId()));
+            note.setFiles(noteRepository.findFilesByNoteId(note.getId()));
         }
         return foundedNotes;
     }
@@ -360,27 +468,156 @@ public class NoteService {
         return tagList;
     }
 
-    public Map<String, OpenGraphData> processOpenGraphData(List<String> links) {
-        Map<String, OpenGraphData> openGraphDataMap = new HashMap<>();
 
-        for (String link : links) {
+
+    public List<String> getUrlsByNoteId (Note note){
+        return openGraphDataRepository.findUrlsByNoteId(note.getId());
+    }
+
+    public OpenGraphData getOpenGraphDataByUrl(String url) {
+        System.out.println("Получен URL для поиска: " + url);
+        return openGraphDataRepository.findByUrl(url).stream().findFirst()
+                .orElseThrow(() -> new RuntimeException("OpenGraphData not found for URL: " + url));
+    }
+
+    public List<OpenGraphData> getOpenGraphDataForNote(UUID noteId) {
+
+          return openGraphDataRepository.findByNoteId(noteId);
+    }
+
+    @Transactional
+    public Note addFilesToNote(UUID noteId, List<MultipartFile> files) {
+        Note note = noteRepository.findById(noteId).orElseThrow(() -> new RuntimeException("Note not found"));
+
+        for (MultipartFile file : files) {
             try {
-                Document document = Jsoup.connect(link).get();
-                OpenGraphData ogData = new OpenGraphData();
+                // TODO временно дляч теста ставлю абсолютный путь
+                String uploadDir = "E:/uploaded/uploaded-files/";
+                Path uploadPath = Paths.get(uploadDir);
 
-                ogData.setTitle(getMetaTagContent(document, "og:title"));
-                ogData.setDescription(getMetaTagContent(document, "og:description"));
-                ogData.setImage(getMetaTagContent(document, "og:image"));
-                ogData.setUrl(link);
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
 
-                openGraphDataMap.put(link, ogData);
+                // Уникальное имя файла
+                String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
+                String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName;
+
+                Path filePath = uploadPath.resolve(uniqueFileName);
+                Files.copy(file.getInputStream(), filePath);
+
+                System.out.println("Оригинальное имя файла: " + file.getOriginalFilename());
+                System.out.println("Директория загрузки: " + uploadDir);
+                System.out.println("Уникальное имя файла: " + uniqueFileName);
+
+
+
+                Files.copy(file.getInputStream(), Paths.get(filePath.toUri()),StandardCopyOption.REPLACE_EXISTING);
+
+                // Сохранение информации о файле
+                note.setFilePath(filePath.toString());
+                note.setFileType(detectFileType(originalFileName));
+
+                NoteFile newNoteFile = new NoteFile();
+                newNoteFile.setFileName(originalFileName);
+                newNoteFile.setFilePath(filePath.toString());
+                newNoteFile.setNote(note);
+                noteRepository.save(note);
+
+
+                List<NoteFile> newFileList = note.getFiles();
+                newFileList.add(newNoteFile);
+                note.setFiles(newFileList);
+
+
+
             } catch (IOException e) {
-                // Логируем ошибку, если невозможно обработать ссылку
-                System.err.println("Ошибка при обработке ссылки: " + link + " - " + e.getMessage());
+                throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
+            }
+        }
+        //UUID id, String filePath, String fileName, Note note
+
+        return noteRepository.save(note);
+    }
+
+    @Transactional
+    public Note addAudiosToNote(UUID noteId, List<MultipartFile> audios) {
+        Note note = noteRepository.findById(noteId).orElseThrow(() -> new RuntimeException("Note not found"));
+        if(audios.isEmpty() || audios ==null){
+            System.out.println("audios not present in endpoint");
+        }
+        System.out.println("Аудиофайл на входе: " + audios.toString());
+        System.out.println("Размер аудиофайла: " + audios.size());
+
+        for (MultipartFile audio : audios) {
+            try {
+                // TODO временно дляч теста ставлю абсолютный путь
+                String uploadDir = "E:/uploaded/uploaded-audio/";
+                //String uploadDir = audioStoragePath;
+                Path uploadPath = Paths.get(uploadDir);
+
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+
+                String originalFileName = StringUtils.cleanPath(Objects.requireNonNull(audio.getOriginalFilename()));
+                String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName;
+
+                Path filePath = uploadPath.resolve(uniqueFileName);
+
+                System.out.println("Оригинальное имя аудиофайла: " + audio.getOriginalFilename());
+                System.out.println("Директория загрузки аудиофайла: " + uploadDir);
+                System.out.println("Уникальное имя файла аудиофайла: " + uniqueFileName);
+
+                Files.copy(audio.getInputStream(), Paths.get(filePath.toUri()), StandardCopyOption.REPLACE_EXISTING);
+
+
+
+                // Сохранение информации о файле
+//                note.setFilePath(filePath.toString()); // Можно расширить для работы с несколькими файлами
+//                note.setFileType(detectFileType(originalFileName));
+
+                NoteAudio newNoteAudioFile = new NoteAudio();
+                newNoteAudioFile.setAudioFileName(originalFileName+".mp3");
+                newNoteAudioFile.setAudioFilePath(filePath.toString());
+                newNoteAudioFile.setNote(note);
+                noteRepository.save(note);
+
+
+                List<NoteAudio> newAudioFileList = note.getAudios();
+
+                // TODO перенести за пределы цикла, переделать сбор аудио
+                newAudioFileList.add(newNoteAudioFile);
+
+
+
+
+            } catch (IOException e) {
+                throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
             }
         }
 
-        return openGraphDataMap;
+        return noteRepository.save(note);
+    }
+
+    private String downloadFile(String fileUrl, String storagePath, String fileName) {
+        try {
+            Path storageDirectory = Paths.get(storagePath);
+            Path destinationPath = storageDirectory.resolve(fileName);
+            Files.copy(new URL(fileUrl).openStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
+            return destinationPath.toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to download file: " + fileUrl, e);
+        }
+    }
+
+    @Transactional
+    public Note updateNoteCoordinates(UUID noteId, Long x, Long y) {
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new RuntimeException("Note not found"));
+        note.setPositionX(x);
+        note.setPositionY(y);
+        return noteRepository.save(note);
     }
 
 
