@@ -57,6 +57,51 @@ public class NoteBot extends TelegramLongPollingBot {
             }
         }
     }
+
+    // Обработка смешанного сообщения
+    private void handleMixedMessage(Message message) {
+        String chatId = message.getChatId().toString();
+        String text = message.getText();
+        String photoUrl = null;
+
+        if (message.hasPhoto()) {
+            try {
+                String fileId = message.getPhoto().get(message.getPhoto().size() - 1).getFileId(); // Последнее изображение — наибольшего размера
+                photoUrl = getFileUrl(fileId);
+            } catch (Exception e) {
+                sendResponse(chatId, "Ошибка при получении изображения: " + e.getMessage());
+            }
+        }
+
+        String response;
+        if (text.contains("http")) {
+            String[] parts = text.split("\\s+", 2);
+            String link = parts[0];
+            String comment = parts.length > 1 ? parts[1] : "";
+
+            String result = sendMixedNoteToBackend(comment, link, photoUrl);
+            response = "Смешанное сообщение обработано: " + result;
+        } else {
+            response = "Ошибка: сообщение должно содержать ссылку или изображение.";
+        }
+
+        sendResponse(chatId, response);
+    }
+
+    // Обработка фото
+    private void handlePhotoMessage(Message message) {
+        String chatId = message.getChatId().toString();
+        try {
+            String fileId = message.getPhoto().get(message.getPhoto().size() - 1).getFileId();
+            String photoUrl = getFileUrl(fileId);
+            String response = sendMixedNoteToBackend(null, null, photoUrl);
+            sendResponse(chatId, response);
+        } catch (Exception e) {
+            sendResponse(chatId, "Ошибка при обработке изображения: " + e.getMessage());
+        }
+    }
+
+
     // Обработка документов
     private void handleDocumentMessage(Message message) {
         String chatId = message.getChatId().toString();
@@ -106,25 +151,28 @@ public class NoteBot extends TelegramLongPollingBot {
         String response;
         if (userMessage.equalsIgnoreCase("/start")) {
             response = "Добро пожаловать! Используйте команды:\n" +
-                    "/addnote - создать заметку\n" +
+                    "/addnote {текст} - создать заметку\n" +
                     "/help - список команд";
-        } else if (userMessage.startsWith("/addnote")) {
-            response = "Введите текст заметки в формате: /addnote {ваш текст}";
         } else if (userMessage.startsWith("/addnote ")) {
             String noteContent = userMessage.substring(9).trim();
             if (noteContent.isEmpty()) {
                 response = "Ошибка: текст заметки не может быть пустым.";
             } else {
                 // Отправка заметки на сервер
-                boolean success = Boolean.parseBoolean(sendNoteToBackend(noteContent,null,null));
-                response = success ? "Заметка успешно добавлена!" : "Ошибка при добавлении заметки.";
+                String result = sendNoteToBackend(noteContent, null, null);
+                response = "Заметка добавлена: " + result;
             }
+        } else if (userMessage.equalsIgnoreCase("/help")) {
+            response = "Доступные команды:\n" +
+                    "/addnote {текст} - добавить новую заметку\n" +
+                    "/help - показать команды";
         } else {
-            response = "Неизвестная команда. Используйте /help для получения списка команд.";
+            response = "Неизвестная команда. Используйте /help для списка команд.";
         }
 
         sendResponse(chatId, response);
     }
+
 
     // Получение URL файла по его ID
     private String getFileUrl(String fileId) {
@@ -138,33 +186,71 @@ public class NoteBot extends TelegramLongPollingBot {
     }
 
     // Отправка данных на бэкенд
+    //TODO подставить проект по умолчанию, сделать URL не в коде, а в конфиге
     private String sendNoteToBackend(String content, String fileUrl, String fileName) {
         try {
             RestTemplate restTemplate = new RestTemplate();
+            Map<String, Object> requestBody = new HashMap<>();
+            if (content != null) requestBody.put("content", content);
+            if (fileUrl != null) requestBody.put("url", fileUrl);
 
-            // Создаем тело запроса
-            MultiValueMap<String, Object> requestBody = new LinkedMultiValueMap<>();
-            if (content != null) {
-                requestBody.add("content", content);
-            }
-            if (fileUrl != null) {
-                requestBody.add("fileUrl", fileUrl);
-                requestBody.add("fileName", fileName);
-            }
-
-            // Отправляем данные на сервер
-            ResponseEntity<Map> response = restTemplate.postForEntity("http://localhost:8080/api/notes", requestBody, Map.class);
-
-            // Обработка ответа
-            Map<String, Object> responseBody = response.getBody();
-            return "Заметка добавлена!\nСсылка: " + responseBody.get("noteUrl") +
-                    "\nРезультат анализа: " + responseBody.get("analysis") +
-                    "\nТеги: " + responseBody.get("tags");
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    "http://localhost:8080/api/notes/DEFAULT_PROJECT_ID", requestBody, String.class
+            );
+            return response.getBody();
         } catch (Exception e) {
             e.printStackTrace();
-            return "Ошибка при добавлении заметки: " + e.getMessage();
+            return "Ошибка: " + e.getMessage();
         }
     }
+
+    private String sendMixedNoteToBackend(String content, String url, String photoUrl) {
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            Map<String, Object> requestBody = new HashMap<>();
+            if (content != null) requestBody.put("content", content);
+            if (url != null) requestBody.put("url", url);
+            if (photoUrl != null) requestBody.put("photoUrl", photoUrl);
+
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    "http://localhost:8080/api/notes/mixed", requestBody, String.class
+            );
+            return response.getBody();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Ошибка при отправке смешанного сообщения: " + e.getMessage();
+        }
+    }
+
+
+//    private String sendNoteToBackend(String content, String fileUrl, String fileName) {
+//        try {
+//            RestTemplate restTemplate = new RestTemplate();
+//
+//            // Создаем тело запроса
+//            MultiValueMap<String, Object> requestBody = new LinkedMultiValueMap<>();
+//            if (content != null) {
+//                requestBody.add("content", content);
+//            }
+//            if (fileUrl != null) {
+//                requestBody.add("fileUrl", fileUrl);
+//                requestBody.add("fileName", fileName);
+//            }
+//
+//            // Отправляем данные на сервер
+//            ResponseEntity<Map> response = restTemplate.postForEntity("http://localhost:8080/api/notes", requestBody, Map.class);
+//
+//            // Обработка ответа
+//            Map<String, Object> responseBody = response.getBody();
+//            return "Заметка добавлена!\nСсылка: " + responseBody.get("noteUrl") +
+//                    "\nРезультат анализа: " + responseBody.get("analysis") +
+//                    "\nТеги: " + responseBody.get("tags");
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return "Ошибка при добавлении заметки: " + e.getMessage();
+//        }
+//    }
+
 
     private void sendResponse(String chatId, String response) {
         SendMessage message = new SendMessage();

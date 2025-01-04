@@ -17,9 +17,11 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -235,7 +237,7 @@ public class NoteService {
         return note;
     }
 
-    private OpenGraphData fetchOpenGraphData(String url, Note note) {
+    public OpenGraphData fetchOpenGraphData(String url, Note note) {
         try {
             Document document = Jsoup.connect(url).get();
             OpenGraphData ogData = new OpenGraphData();
@@ -382,6 +384,21 @@ public class NoteService {
 
         return openGraphDataMap;
     }
+
+    public String downloadFile(String fileUrl, String storagePath, String fileName) {
+        try {
+            Path storageDirectory = Paths.get(storagePath);
+            if (!Files.exists(storageDirectory)) {
+                Files.createDirectories(storageDirectory);
+            }
+            Path destinationPath = storageDirectory.resolve(fileName);
+            Files.copy(new URL(fileUrl).openStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
+            return destinationPath.toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
+        }
+    }
+
 
 
 }
