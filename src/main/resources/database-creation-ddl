@@ -1,6 +1,6 @@
 -- DROP SCHEMA public;
 
-CREATE SCHEMA public AUTHORIZATION pg_database_owner;
+CREATE SCHEMA public IF NOT EXIST AUTHORIZATION pg_database_owner;
 
 COMMENT ON SCHEMA public IS 'standard public schema';
 -- public.projects определение
@@ -9,7 +9,7 @@ COMMENT ON SCHEMA public IS 'standard public schema';
 
 -- DROP TABLE public.projects;
 
-CREATE TABLE public.projects (
+CREATE TABLE public.projects IF NOT EXIST (
 	id uuid NOT NULL,
 	description varchar(500) NULL,
 	"name" varchar(255) NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE public.projects (
 
 -- DROP TABLE public.tags;
 
-CREATE TABLE public.tags (
+CREATE TABLE public.tags IF NOT EXIST (
 	id uuid NOT NULL,
 	is_auto_generated bool NOT NULL,
 	"name" varchar(255) NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE public.tags (
 
 -- DROP TABLE public.notes;
 
-CREATE TABLE public.notes (
+CREATE TABLE public.notes IF NOT EXIST (
 	id uuid NOT NULL,
 	ai_summary bool NULL,
 	annotation varchar(255) NULL,
@@ -67,7 +67,7 @@ CREATE TABLE public.notes (
 
 -- DROP TABLE public.open_graph_data;
 
-CREATE TABLE public.open_graph_data (
+CREATE TABLE public.open_graph_data IF NOT EXIST (
 	id uuid NOT NULL,
 	description varchar(255) NULL,
 	image varchar(255) NULL,
@@ -87,7 +87,7 @@ CREATE TABLE public.open_graph_data (
 
 -- DROP TABLE public.note_audios;
 
-CREATE TABLE public.note_audios (
+CREATE TABLE public.note_audios IF NOT EXIST (
 	id uuid NOT NULL,
 	server_file_path varchar(255) NOT NULL,
 	original_name varchar(255) NOT NULL,
@@ -103,7 +103,7 @@ CREATE TABLE public.note_audios (
 
 -- DROP TABLE public.note_files;
 
-CREATE TABLE public.note_files (
+CREATE TABLE public.note_files IF NOT EXIST (
 	id uuid NOT NULL,
 	server_file_path varchar(255) NOT NULL,
 	original_name varchar(255) NOT NULL,
@@ -119,7 +119,7 @@ CREATE TABLE public.note_files (
 
 -- DROP TABLE public.note_tags;
 
-CREATE TABLE public.note_tags (
+CREATE TABLE public.note_tags IF NOT EXIST(
 	note_id uuid NOT NULL,
 	tag_id uuid NOT NULL,
 	CONSTRAINT fk8babdwu6uqiu4rdkeuy8dkna0 FOREIGN KEY (tag_id) REFERENCES public.tags(id),
