@@ -399,6 +399,16 @@ public class NoteService {
         }
     }
 
+    public List<Note> getNotesByTags(List<String> tags) {
+        return noteRepository.findAllByTags(tags, tags.size());
+    }
+
+    public List<String> getAllUniqueTags() {
+        return noteRepository.findAllUniqueTags();
+    }
+
+
+
 
 
 }
