@@ -46,12 +46,15 @@ public class NoteBot extends TelegramLongPollingBot {
             Message message = update.getMessage();
 
             // Проверяем тип сообщения
-            if (message.hasText()) {
+            // TODO Animation потом поменять на Text
+            if (message.hasAnimation()) {
                 handleTextMessage(message);
             } else if (message.hasDocument()) {
                 handleDocumentMessage(message);
             } else if (message.hasVoice()) {
                 handleVoiceMessage(message);
+            } else if (message.hasText()) {
+                handleIncomingMessage(message);
             } else {
                 sendResponse(message.getChatId().toString(), "Неизвестный тип сообщения. Поддерживаются текст, документы и голосовые сообщения.");
             }

@@ -1,6 +1,7 @@
 package com.example.noteapp.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
@@ -21,9 +22,6 @@ public class Note {
     private String content;
 
     @Column(nullable = true)
-    private String url;
-
-    @Column(nullable = true)
     private String audioFilePath;
 
     @Column(nullable = true)
@@ -38,7 +36,7 @@ public class Note {
     @JsonIgnore
     @NotNull(message = "Проект обязателен.")
     @ManyToOne
-    @JoinColumn(name = "project_id")
+    @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
     @ManyToMany(cascade = CascadeType.ALL)
@@ -69,7 +67,14 @@ public class Note {
     private Long positionY;
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OpenGraphData> openGraphData;
+    @JsonManagedReference
+    private List<OpenGraphData> openGraphData = new ArrayList<>();;
+
+    @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<NoteFile> files = new ArrayList<>();
+
+    @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<NoteAudio> audios = new ArrayList<>();
 
 
     // constructors
@@ -121,14 +126,6 @@ public class Note {
 
     public void setContent(String content) {
         this.content = content;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
     }
 
     public String getAudioFilePath() {
@@ -195,4 +192,19 @@ public class Note {
         this.neuralNetwork = neuralNetwork;
     }
 
+    public List<NoteFile> getFiles() {
+        return files;
+    }
+
+    public void setFiles(List<NoteFile> files) {
+        this.files = files;
+    }
+
+    public List<NoteAudio> getAudios() {
+        return audios;
+    }
+
+    public void setAudios(List<NoteAudio> audios) {
+        this.audios = audios;
+    }
 }

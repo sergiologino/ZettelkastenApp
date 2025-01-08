@@ -9,6 +9,9 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
   server:
     port: 8080
   security:
@@ -16,6 +19,12 @@ spring:
       name: admin
       password: admin123
       enabled: false
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 200MB
+      max-request-size: 250MB
+
 
 springdoc:
   api-docs:
@@ -34,3 +43,21 @@ telegram:
   bot:
     token: "7645020182:AAESVweSGS_n7ZbxFx3NNRE4YmrvZ6HsXvg"
     username: "AltaBrain_bot"
+logging:
+  threshold:
+    console: INFO
+  level:
+    org:
+      hibernate:
+        SQL: DEBUG
+        type:
+          descriptor:
+            sql:
+              BasicBinder: TRACE
+file:
+  storage-path: /Users/savki/uploaded/uploaded-files
+audio:
+  storage-path: /Users/savki/uploaded/uploaded-audios
+open-graph-data:
+  enabled: true
+
