@@ -95,16 +95,16 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{projectId}/notes")
-    public List<NoteDTO> getNotesByProject(@PathVariable UUID projectId) {
-        Project project = projectService.getProjectById(projectId);
-        List<NoteDTO> newNoteDTOList=new ArrayList<>();
-        List<Note> foundedNotes=noteService.getNotesByProjectId(projectId);
-        for(Note note:foundedNotes){
-            note.setProject(project);
-            note.setTags(noteService.getTagsByNoteId(note.getId()));
-            newNoteDTOList.add(noteConverter.toDTO(note));
-        }
-        return newNoteDTOList;
-    }
+//    @GetMapping("/{projectId}/notes")
+//    public List<NoteDTO> getNotesByProject(@PathVariable UUID projectId) {
+//        Project project = projectService.getProjectById(projectId);
+//        List<NoteDTO> newNoteDTOList=new ArrayList<>();
+//        List<Note> foundedNotes=noteService.getNotesByProjectId(projectId);
+//        for(Note note:foundedNotes){
+//            note.setProject(project);
+//            note.setTags(noteService.getTagsByNoteId(note.getId()));
+//            newNoteDTOList.add(noteConverter.toDTO(note));
+//        }
+//        return newNoteDTOList;
+//    }
 }

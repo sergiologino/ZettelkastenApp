@@ -229,8 +229,8 @@ public class NoteController {
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
     @GetMapping("/{id}")
-    public Note getNoteById(@PathVariable UUID id) {
-        return noteService.getNoteById(id);
+    public NoteDTO getNoteById(@PathVariable UUID id) {
+        return noteConverter.toDTO(noteService.getNoteById(id));
     }
 
     @PutMapping("/group/analyze")
@@ -254,13 +254,13 @@ public class NoteController {
     }
 
     @GetMapping("/{projectId}/notes")
-    public List<Note> getNotesByProject(@PathVariable UUID projectId) {
+    public List<NoteDTO> getNotesByProject(@PathVariable UUID projectId) {
         Project project = projectService.getProjectById(projectId);
         if (project == null) {
             new ResponseStatusException(HttpStatus.NOT_FOUND,"Project not found");
         }
 
-        List<Note> foundedNotes=noteService.getNotesByProjectId(projectId);
+        List<NoteDTO> foundedNotes=noteService.getNotesByProjectId(projectId);
 
         return foundedNotes; // Возвращаем список заметок проекта
     }

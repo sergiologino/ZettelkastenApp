@@ -343,12 +343,14 @@ public class NoteService {
         return projectGroupNote;
     }
 
-    public List<Note> getNotesByProjectId(UUID projectId) {
+    public List<NoteDTO> getNotesByProjectId(UUID projectId) {
         List<Note> foundedNotes = noteRepository.findAllByProjectId(projectId);
+        List<NoteDTO> foundedNoteDTO =new ArrayList<NoteDTO>();
         for (Note note : foundedNotes) {
             note.setProject(projectService.getProjectById(note.getProject().getId()));
+            foundedNoteDTO.add(noteConverter.toDTO(note));
         }
-        return foundedNotes;
+        return foundedNoteDTO;
     }
 
     public List<Tag> getTagsByNoteId(UUID noteId) { return noteRepository.findTagsByNoteId(noteId); }
