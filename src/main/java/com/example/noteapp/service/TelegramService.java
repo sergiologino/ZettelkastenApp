@@ -11,11 +11,9 @@ public class TelegramService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+
     @Value("${telegram.bot.token}")
     private String botToken;
-
-
-//    private final String botToken = "***********";
 
     public void sendMessage(String chatId, String message) {
         String url = "https://api.telegram.org/bot" + botToken + "/sendMessage";

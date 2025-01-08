@@ -1,6 +1,7 @@
 package com.example.noteapp.controller;
 
 import com.example.noteapp.dto.NoteDTO;
+import com.example.noteapp.dto.ProjectDTO;
 import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.Note;
 import com.example.noteapp.model.Project;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/projects")
@@ -32,18 +34,14 @@ public class ProjectController {
         this.noteConverter = noteConverter;
     }
 
-    @Operation(summary = "Получить список всех проектов", description = "Возвращает список всех проектов.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Список проектов успешно возвращен",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Project.class))),
-            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
-    })
+    @ApiResponse(responseCode = "200", description = "Список проектов успешно возвращен",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProjectDTO.class)))
     @GetMapping
-    public List<Project> getAllProjects() {
-        List<Project> allProject = projectService.getAllProjects();
-        System.out.println("all project: "+allProject);
-        return allProject;
+    public List<ProjectDTO> getAllProjects() {
+        List<Project> allProjects = projectService.getAllProjects();
+        return allProjects.stream()
+                .map(projectService::convertToDto)
+                .collect(Collectors.toList());
 
     }
 

@@ -1,8 +1,10 @@
 package com.example.noteapp.model;
 
 import com.example.noteapp.service.NoteService;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +27,12 @@ public class Project {
     @Column(length = 10, nullable = true)
     private String color;
 
+    @Column(name="created_at")
+    private LocalDateTime createdAt;
+
+
+
+    @JsonIgnore
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Note> notes;
 
