@@ -153,8 +153,6 @@ public class NoteController {
             @ApiResponse(responseCode = "400", description = "Некорректные данные"),
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
-
-
     @PostMapping("/{projectId}")
     public ResponseEntity<?> createNote(@PathVariable UUID projectId, @RequestBody NoteDTO noteDto) {
         System.out.println("Полученные данные: content:" + noteDto.getContent()+" note: "+noteDto.toString());

@@ -1,6 +1,7 @@
 package com.example.noteapp.model;
 
 import com.example.noteapp.service.NoteService;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -31,6 +32,7 @@ public class Project {
 
 
 
+    @JsonIgnore
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Note> notes;
 
