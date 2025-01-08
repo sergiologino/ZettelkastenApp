@@ -17,6 +17,13 @@ public interface NoteRepository extends JpaRepository<Note, UUID> {
     @Query("SELECT n.tags FROM Note n WHERE n.id = :noteId")
     List<Tag> findTagsByNoteId(@Param("noteId") UUID noteId);
 
+
+    @Query("SELECT n FROM Note n JOIN n.tags t WHERE t.name IN :tagNames GROUP BY n HAVING COUNT(t.id) = :tagCount")
+    List<Note> findAllByTags(@Param("tagNames") List<String> tagNames, @Param("tagCount") long tagCount);
+
+    @Query("SELECT DISTINCT t.name FROM Tag t")
+    List<String> findAllUniqueTags();
+
     @Query("SELECT n FROM Note n LEFT JOIN FETCH n.files LEFT JOIN FETCH n.audios WHERE n.project.id = :projectId")
     List<Note> findAllByProjectIdWithFilesAndAudios(@Param("projectId") UUID projectId);
 
@@ -25,6 +32,7 @@ public interface NoteRepository extends JpaRepository<Note, UUID> {
 
     @Query("SELECT f FROM NoteFile f WHERE f.note.id = :noteId")
     List<NoteFile> findFilesByNoteId(@Param("noteId") UUID noteId);
+
 
 
 
