@@ -600,16 +600,16 @@ public class NoteService {
         return noteRepository.save(note);
     }
 
-    private String downloadFile(String fileUrl, String storagePath, String fileName) {
-        try {
-            Path storageDirectory = Paths.get(storagePath);
-            Path destinationPath = storageDirectory.resolve(fileName);
-            Files.copy(new URL(fileUrl).openStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
-            return destinationPath.toString();
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to download file: " + fileUrl, e);
-        }
-    }
+//    private String downloadFile(String fileUrl, String storagePath, String fileName) {
+//        try {
+//            Path storageDirectory = Paths.get(storagePath);
+//            Path destinationPath = storageDirectory.resolve(fileName);
+//            Files.copy(new URL(fileUrl).openStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
+//            return destinationPath.toString();
+//        } catch (IOException e) {
+//            throw new RuntimeException("Failed to download file: " + fileUrl, e);
+//        }
+//    }
 
     @Transactional
     public Note updateNoteCoordinates(UUID noteId, Long x, Long y) {
@@ -619,6 +619,32 @@ public class NoteService {
         note.setPositionY(y);
         return noteRepository.save(note);
     }
+
+    public String downloadFile(String fileUrl, String storagePath, String fileName) {
+        try {
+            Path storageDirectory = Paths.get(storagePath);
+            if (!Files.exists(storageDirectory)) {
+                Files.createDirectories(storageDirectory);
+            }
+            Path destinationPath = storageDirectory.resolve(fileName);
+            Files.copy(new URL(fileUrl).openStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
+            return destinationPath.toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
+        }
+    }
+
+    public List<Note> getNotesByTags(List<String> tags) {
+        return noteRepository.findAllByTags(tags, tags.size());
+    }
+
+    public List<String> getAllUniqueTags() {
+        return noteRepository.findAllUniqueTags();
+    }
+
+
+
+
 
 
 }
