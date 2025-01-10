@@ -30,11 +30,15 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0")
     implementation("org.telegram:telegrambots-spring-boot-starter:6.5.0")
+    implementation("javax.servlet:javax.servlet-api:4.0.1")
     // https://mvnrepository.com/artifact/org.jsoup/jsoup
     implementation("org.jsoup:jsoup:1.17.2")
 
     compileOnly("org.projectlombok:lombok")
     runtimeOnly("org.postgresql:postgresql")
+    // https://mvnrepository.com/artifact/jakarta.servlet/jakarta.servlet-api
+//    compileOnly("jakarta.servlet:jakarta.servlet-api:6.1.0")
+
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")

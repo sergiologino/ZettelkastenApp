@@ -7,6 +7,7 @@ import com.example.noteapp.integration.IntegrationException;
 import com.example.noteapp.integration.IntegrationService;
 import com.example.noteapp.mapper.AbstractConverter;
 //import com.example.noteapp.mapper.NoteConverter;
+import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.*;
 import com.example.noteapp.repository.NoteRepository;
 import com.example.noteapp.repository.OpenGraphDataRepository;
@@ -29,6 +30,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
+
+
 @Service
 public class NoteService {
 
@@ -43,6 +46,7 @@ public class NoteService {
 
 
     private final NoteRepository noteRepository;
+
     private final TagService tagService;
     private final IntegrationService integrationService;
     private final TelegramService telegramService;
@@ -53,7 +57,7 @@ public class NoteService {
     private final String audioFilePath = "${audio.storage-path}";
 
 
-    public NoteService( NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, OpenGraphDataRepository openGraphDataRepository) {
+    public NoteService(NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, OpenGraphDataRepository openGraphDataRepository) {
 
         this.noteRepository = noteRepository;
         this.tagService = tagService;
@@ -590,9 +594,6 @@ public class NoteService {
                 // TODO перенести за пределы цикла, переделать сбор аудио
                 newAudioFileList.add(newNoteAudioFile);
 
-
-
-
             } catch (IOException e) {
                 throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
             }
@@ -601,16 +602,16 @@ public class NoteService {
         return noteRepository.save(note);
     }
 
-    private String downloadFile(String fileUrl, String storagePath, String fileName) {
-        try {
-            Path storageDirectory = Paths.get(storagePath);
-            Path destinationPath = storageDirectory.resolve(fileName);
-            Files.copy(new URL(fileUrl).openStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
-            return destinationPath.toString();
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to download file: " + fileUrl, e);
-        }
-    }
+//    private String downloadFile(String fileUrl, String storagePath, String fileName) {
+//        try {
+//            Path storageDirectory = Paths.get(storagePath);
+//            Path destinationPath = storageDirectory.resolve(fileName);
+//            Files.copy(new URL(fileUrl).openStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
+//            return destinationPath.toString();
+//        } catch (IOException e) {
+//            throw new RuntimeException("Failed to download file: " + fileUrl, e);
+//        }
+//    }
 
     @Transactional
     public Note updateNoteCoordinates(UUID noteId, Long x, Long y) {
@@ -636,12 +637,52 @@ public class NoteService {
     }
 
     public List<Note> getNotesByTags(List<String> tags) {
+        List<Note> foundedNotes = noteRepository.findNotesByTags(tags);
+        System.out.println("Найденные заметки: " + foundedNotes);
+
+        // Оставляем только заметки, содержащие все тэги
+        List<Note> filteredNotes = foundedNotes.stream()
+                .filter(note -> note.getTags().stream()
+                        .map(Tag::getName)
+                        .collect(Collectors.toSet())
+                        .containsAll(tags))
+                .collect(Collectors.toList());
+
+
+        System.out.println("Отобранные заметки: "+filteredNotes);
+        return filteredNotes;
+
+    }
+
+    public List<String> getAllUniqueTags() {
+        return noteRepository.findAllUniqueTags();
+    }
+
+//     public String downloadFile(String fileUrl, String storagePath, String fileName) {
+//         try {
+//             Path storageDirectory = Paths.get(storagePath);
+//             if (!Files.exists(storageDirectory)) {
+//                 Files.createDirectories(storageDirectory);
+//             }
+//             Path destinationPath = storageDirectory.resolve(fileName);
+//             Files.copy(new URL(fileUrl).openStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
+//             return destinationPath.toString();
+//         } catch (IOException e) {
+//             throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
+//         }
+//     }
+
+    public List<Note> getNotesByTags(List<String> tags) {
         return noteRepository.findAllByTags(tags, tags.size());
     }
 
     public List<String> getAllUniqueTags() {
         return noteRepository.findAllUniqueTags();
     }
+
+
+
+
 
 
 

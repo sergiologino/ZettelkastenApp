@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/notes")
+@CrossOrigin(origins = "http://localhost:3000") // Укажите ваш фронтенд-URL
 public class NoteController {
 
     private final NoteService noteService;
@@ -58,6 +59,37 @@ public class NoteController {
         Project project = projectService.getProjectById(projectId);
         return noteService.moveNoteToProject(noteId, project);
     }
+
+    @Operation(summary = "Получить все заметки")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Список заметок успешно получен")
+    })
+    @GetMapping
+    public List<NoteDTO> getAllNotes() {
+        List<Note> notes = noteService.getAllNotes();
+        return notes.stream().map(noteConverter::toDTO).collect(Collectors.toList());
+    }
+
+
+    @Operation(summary = "Получить все заметки с указанными тэгами")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Список заметок успешно получен")
+    })
+    @GetMapping("/tags/search")
+    public List<NoteDTO> getNotesByTags(@RequestParam List<String> tags) {
+        List<Note> notes = noteService.getNotesByTags(tags);
+        return notes.stream().map(noteConverter::toDTO).collect(Collectors.toList());
+    }
+
+    @Operation(summary = "Получить все уникальные тэги")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Список уникальных тэгов успешно получен")
+    })
+    @GetMapping("/tags")
+    public List<String> getAllUniqueTags() {
+        return noteService.getAllUniqueTags();
+    }
+
 
 
 
