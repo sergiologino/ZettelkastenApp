@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/notes")
+@CrossOrigin(origins = "http://localhost:3000") // Укажите ваш фронтенд-URL
 public class NoteController {
 
     private final NoteService noteService;
@@ -73,7 +74,7 @@ public class NoteController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Список заметок успешно получен")
     })
-    @GetMapping("/by-tags")
+    @GetMapping("/tags/search")
     public List<NoteDTO> getNotesByTags(@RequestParam List<String> tags) {
         List<Note> notes = noteService.getNotesByTags(tags);
         return notes.stream().map(noteConverter::toDTO).collect(Collectors.toList());
