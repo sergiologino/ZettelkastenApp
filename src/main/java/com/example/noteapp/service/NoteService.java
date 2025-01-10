@@ -318,7 +318,7 @@ public class NoteService {
 
 
 
-    private OpenGraphData fetchOpenGraphData(String url, Note note) {
+    public OpenGraphData fetchOpenGraphData(String url, Note note) {
 
         try {
             Document document = Jsoup.connect(url).get();
