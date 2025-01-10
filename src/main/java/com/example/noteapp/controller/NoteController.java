@@ -294,9 +294,6 @@ public class NoteController {
 //    }
 
 
-
-
-
     @Operation(summary = "Получить заметку по ID", description = "Возвращает заметку с указанным идентификатором.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Заметка успешно возвращена",

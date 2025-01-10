@@ -45,9 +45,14 @@ public class NoteBot extends TelegramLongPollingBot {
         if (update.hasMessage()) {
             Message message = update.getMessage();
 
+            String chatId = message.getChatId().toString();
+            String text = message.getText();
+
             // Проверяем тип сообщения
             // TODO Animation потом поменять на Text
-            if (message.hasAnimation()) {
+            if (text != null && (message.hasPhoto() || text.contains("http"))) {
+                handleMixedMessage(message);
+            } else if (message.hasAnimation()) {
                 handleTextMessage(message);
             } else if (message.hasDocument()) {
                 handleDocumentMessage(message);
