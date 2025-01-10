@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -92,6 +93,38 @@ public class NoteController {
 
 
 
+    @Operation(summary = "Получить все заметки")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Список заметок успешно получен")
+    })
+    @GetMapping
+    public List<NoteDTO> getAllNotes() {
+        List<Note> notes = noteService.getAllNotes();
+        return notes.stream().map(noteConverter::toDTO).collect(Collectors.toList());
+    }
+
+    @Operation(summary = "Получить все заметки с указанными тэгами")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Список заметок успешно получен")
+    })
+    @GetMapping("/by-tags")
+    public List<NoteDTO> getNotesByTags(@RequestParam List<String> tags) {
+        List<Note> notes = noteService.getNotesByTags(tags);
+        return notes.stream().map(noteConverter::toDTO).collect(Collectors.toList());
+    }
+
+    @Operation(summary = "Получить все уникальные тэги")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Список уникальных тэгов успешно получен")
+    })
+    @GetMapping("/tags")
+    public List<String> getAllUniqueTags() {
+        return noteService.getAllUniqueTags();
+    }
+
+
+
+
     @Operation(summary = "Обновить заметку ", description = "Обновляет заметку ")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Заметка успешно обновлена",
@@ -123,8 +156,6 @@ public class NoteController {
             @ApiResponse(responseCode = "400", description = "Некорректные данные"),
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
-
-
     @PostMapping("/{projectId}")
     public ResponseEntity<?> createNote(@PathVariable UUID projectId, @RequestBody NoteDTO noteDto) {
 
@@ -156,6 +187,65 @@ public class NoteController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Ошибка при создании заметки: " + e.getMessage());
+        }
+    }
+
+
+    // Обработка смешанных сообщений
+
+    @PostMapping("/mixed")
+    @Operation(
+            summary = "Создать смешанную заметку",
+            description = "Создает новую заметку с текстом, ссылками и/или изображениями. Если проект не указан, используется проект 'from Telegram'.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Заметка успешно создана.",
+                            content = @Content(mediaType = "application/json")
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Некорректные данные запроса.",
+                            content = @Content(mediaType = "application/json")
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Ошибка на сервере.",
+                            content = @Content(mediaType = "application/json")
+                    )
+            }
+    )
+    public ResponseEntity<?> createMixedNote(@RequestBody Map<String, Object> requestBody) {
+        try {
+            String content = (String) requestBody.get("content");
+            String url = (String) requestBody.get("url");
+            String photoUrl = (String) requestBody.get("photoUrl");
+
+            Note note = new Note();
+            note.setContent(content);
+
+            // Добавляем OpenGraph данные
+            if (url != null && !url.isEmpty()) {
+                List<String> urls = List.of(url);
+                List<OpenGraphData> openGraphData = urls.stream()
+                        .map(link -> noteService.fetchOpenGraphData(link, note))
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+                note.setOpenGraphData(openGraphData);
+            }
+
+            // Сохраняем фото
+            if (photoUrl != null && !photoUrl.isEmpty()) {
+                String photoPath = noteService.downloadFile(photoUrl, "photos/", UUID.randomUUID() + ".jpg");
+                note.setFilePath(photoPath);
+                note.setFileType("image");
+            }
+
+            Note savedNote = noteService.saveNote(note);
+            return ResponseEntity.ok("Заметка успешно создана с текстом, ссылкой и/или изображением.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Ошибка при создании смешанной заметки: " + e.getMessage());
         }
     }
 
@@ -202,6 +292,7 @@ public class NoteController {
 //    ) {
 //        return noteService.addAudioToNote(noteId, file);
 //    }
+
 
 
 
