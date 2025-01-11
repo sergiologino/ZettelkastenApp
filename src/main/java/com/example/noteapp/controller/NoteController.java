@@ -38,12 +38,14 @@ public class NoteController {
     private final NoteService noteService;
     private final ProjectService projectService;
     private final NoteConverter noteConverter;
+    private final ProjectRepository projectRepository;
 
 
-    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter) {
+    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter, ProjectRepository projectRepository) {
         this.noteService = noteService;
         this.projectService = projectService;
         this.noteConverter = noteConverter;
+        this.projectRepository = projectRepository;
     }
 
     @Operation(summary = "Переместить заметку в другой проект", description = "Перемещает заметку между проектами.")
@@ -197,7 +199,18 @@ public class NoteController {
                         .map(link -> noteService.fetchOpenGraphData(link, note))
                         .filter(Objects::nonNull)
                         .collect(Collectors.toList());
+                if (openGraphData != null) {
+
+                    String title = "Заголовок OpenGraph";
+                    String description = "Описание OpenGraph";
+//                    String title = openGraphData.getTitle() != null ? openGraphData.getTitle() : "";
+//                    String description = openGraphData.getDescription() != null ? openGraphData.getDescription() : "";
+                    note.setContent(title + "\n" + description + "\n\n" + content); // Формируем полный контент
+
+                }
                 note.setOpenGraphData(openGraphData);
+                note.setProject(projectService.getProjectById(UUID.fromString("5c4a3ca8-d911-4ee4-94d6-3386239f8c04")));
+
             }
 
             // Сохраняем фото
