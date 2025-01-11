@@ -72,6 +72,8 @@ public class NoteBot extends TelegramLongPollingBot {
         String text = message.getText();
         String photoUrl = null;
 
+        String response =null;
+
         if (message.hasPhoto()) {
             try {
                 String fileId = message.getPhoto().get(message.getPhoto().size() - 1).getFileId(); // Последнее изображение — наибольшего размера
@@ -81,17 +83,37 @@ public class NoteBot extends TelegramLongPollingBot {
             }
         }
 
-        String response;
-        if (text.contains("http")) {
-            String[] parts = text.split("\\s+", 2);
-            String link = parts[0];
-            String comment = parts.length > 1 ? parts[1] : "";
 
-            String result = sendMixedNoteToBackend(comment, link, photoUrl);
-            response = "Смешанное сообщение обработано: " + result;
-        } else {
-            response = "Ошибка: сообщение должно содержать ссылку или изображение.";
+        String link = null; // Хранит найденную ссылку
+        StringBuilder commentBuilder = new StringBuilder(); // Хранит описание
+
+        // Разделяем сообщение на строки
+        String[] lines = text.split("\n");
+        for (String line : lines) {
+            if (line.startsWith("http://") || line.startsWith("https://")) {
+                link = line.trim(); // Если строка - ссылка, сохраняем её
+            } else {
+                commentBuilder.append(line.trim()).append("\n"); // Остальное добавляем в описание
+            }
         }
+
+        // Если ссылка не найдена, возвращаем сообщение об ошибке
+        if (link == null) {
+            sendResponse(chatId, "Ошибка: В сообщении отсутствует ссылка.");
+            return;
+        }
+
+        // Формируем описание
+        String comment = commentBuilder.toString().trim();
+
+        System.out.println("Отправляем на создание заметки на бэке: " + link);
+        System.out.println("comment: " + comment);
+        System.out.println("link: " + link);
+        System.out.println("photoUrl: " + photoUrl);
+
+
+        String result = sendMixedNoteToBackend(comment, link, photoUrl);
+        response="Смешанное сообщение обработано: ";
 
         sendResponse(chatId, response);
     }
@@ -203,7 +225,7 @@ public class NoteBot extends TelegramLongPollingBot {
             if (fileUrl != null) requestBody.put("url", fileUrl);
 
             ResponseEntity<String> response = restTemplate.postForEntity(
-                    "http://localhost:8080/api/notes/DEFAULT_PROJECT_ID", requestBody, String.class
+                    "http://localhost:8080/api/notes/5c4a3ca8-d911-4ee4-94d6-3386239f8c04", requestBody, String.class
             );
             return response.getBody();
         } catch (Exception e) {

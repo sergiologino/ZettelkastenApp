@@ -18,6 +18,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -321,19 +322,37 @@ public class NoteService {
     public OpenGraphData fetchOpenGraphData(String url, Note note) {
 
         try {
-            Document document = Jsoup.connect(url).get();
+            // Проверяем, является ли URL корректным
+            if (!isValidUrl(url)) {
+                throw new IllegalArgumentException("Некорректный URL: " + url);
+            }
+            System.out.println("Загрузка OpenGraph данных для: " + url);
+
+            Document document = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                    .get();
             OpenGraphData ogData = new OpenGraphData();
             ogData.setUrl(url);
             ogData.setTitle(getMetaTagContent(document, "og:title"));
             ogData.setDescription(getMetaTagContent(document, "og:description"));
             ogData.setImage(getMetaTagContent(document, "og:image"));
             ogData.setNote(note);
-            System.err.println("graphData:"+ogData);
+            System.out.println("Успешно загружены OpenGraph данные: " + ogData.getTitle());
             return ogData;
         } catch (IOException e) {
             System.err.println("Ошибка при обработке Open Graph: " + url);
             e.printStackTrace(); // Добавлено для отладки
             return null;
+        }
+    }
+
+    // Метод для проверки валидности URL
+    private boolean isValidUrl(String url) {
+        try {
+            new URL(url); // Проверяем, можно ли создать объект URL
+            return url.startsWith("http://") || url.startsWith("https://");
+        } catch (MalformedURLException e) {
+            return false; // Если URL некорректен
         }
     }
 
