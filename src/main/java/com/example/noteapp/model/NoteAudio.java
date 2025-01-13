@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -21,6 +22,12 @@ public class NoteAudio {
     @Column(nullable = false)
     private String originalName;
 
+    @Column(name="audio_type", nullable = true)
+    private String audioType;
+
+    @Column(name = "size", nullable = true)
+    private BigDecimal size;
+
     //@JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
@@ -35,6 +42,8 @@ public class NoteAudio {
         this.originalName = fileName;
         this.note = note;
     }
+
+    // Геттеры и сеттеры
 
     public UUID getId() {
         return id;
@@ -68,6 +77,21 @@ public class NoteAudio {
         this.note = note;
     }
 
-    // Геттеры и сеттеры
+    public String getAudioType() {
+        return audioType;
+    }
+
+    public void setAudioType(String audioType) {
+        this.audioType = audioType;
+    }
+
+    public BigDecimal getSize() {
+        return size;
+    }
+
+    public void setSize(BigDecimal size) {
+        this.size = size;
+    }
+
 }
 

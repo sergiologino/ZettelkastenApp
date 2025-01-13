@@ -66,6 +66,28 @@ public class Note {
     @Column(name="position_y", nullable = true)
     private Long positionY;
 
+    public Integer getWidth() {
+        return width;
+    }
+
+    public Integer getHeight() {
+        return height;
+    }
+
+    public void setWidth(Integer width) {
+        this.width = width;
+    }
+
+    public void setHeight(Integer height) {
+        this.height = height;
+    }
+
+    @Column(name="width", nullable = true)
+    private Integer width;
+
+    @Column(name = "height", nullable = true)
+    private Integer height;
+
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<OpenGraphData> openGraphData = new ArrayList<>();;

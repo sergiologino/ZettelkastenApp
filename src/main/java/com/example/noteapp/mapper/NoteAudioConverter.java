@@ -15,6 +15,9 @@ public class NoteAudioConverter {
         dto.setId(noteAudio.getId());
         dto.setAudioName(noteAudio.getAudioFileName());
         dto.setAudioPath(noteAudio.getAudioFilePath());
+        dto.setType(noteAudio.getAudioType());
+        dto.setSize(noteAudio.getSize());
+
         return dto;
     }
 
@@ -26,6 +29,9 @@ public class NoteAudioConverter {
         noteAudio.setId(dto.getId());
         noteAudio.setAudioFileName(dto.getAudioName());
         noteAudio.setAudioFilePath(dto.getAudioPath());
+        noteAudio.setAudioType(dto.getType());
+        noteAudio.setSize(dto.getSize());
+
         return noteAudio;
     }
 }

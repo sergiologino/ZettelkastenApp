@@ -56,6 +56,8 @@ CREATE TABLE public.notes IF NOT EXIST (
 	should_analyze bool NOT NULL,
 	position_x int8 NULL,
 	position_y int8 NULL,
+	width int8 NULL,
+	height int8 NULL,
 	CONSTRAINT notes_pkey PRIMARY KEY (id),
 	CONSTRAINT fkf5kwkuxo55mgr2vkluhrh7tth FOREIGN KEY (project_id) REFERENCES public.projects(id)
 );
@@ -92,6 +94,8 @@ CREATE TABLE public.note_audios IF NOT EXIST (
 	server_file_path varchar(255) NOT NULL,
 	original_name varchar(255) NOT NULL,
 	note_id uuid NOT NULL,
+	audio_type varchar(255),
+	size NUMERIC,
 	CONSTRAINT note_audios_pkey PRIMARY KEY (id),
 	CONSTRAINT note_audios_note_id_fkey FOREIGN KEY (note_id) REFERENCES public.notes(id) ON DELETE CASCADE
 );

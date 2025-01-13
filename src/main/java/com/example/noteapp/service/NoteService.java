@@ -573,9 +573,12 @@ public class NoteService {
         System.out.println("Аудиофайл на входе: " + audios.toString());
         System.out.println("Размер аудиофайла: " + audios.size());
 
+        String publicPath = "/files/audio/";
+
+
         for (MultipartFile audio : audios) {
             try {
-                // TODO временно дляч теста ставлю абсолютный путь
+                // TODO временно для теста ставлю абсолютный путь
                 String uploadDir = "E:/uploaded/uploaded-audio/";
                 //String uploadDir = audioStoragePath;
                 Path uploadPath = Paths.get(uploadDir);
@@ -585,33 +588,33 @@ public class NoteService {
                 }
 
                 String originalFileName = StringUtils.cleanPath(Objects.requireNonNull(audio.getOriginalFilename()));
-                String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName;
+                // Извлекаем contentType и определяем расширение
+                String contentType = audio.getContentType();
+                String extension = (contentType != null && contentType.startsWith("audio/"))
+                        ? contentType.substring("audio/".length())
+                        : "unknown";
+
+                String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName + "." + extension;
 
                 Path filePath = uploadPath.resolve(uniqueFileName);
-
-                System.out.println("Оригинальное имя аудиофайла: " + audio.getOriginalFilename());
-                System.out.println("Директория загрузки аудиофайла: " + uploadDir);
-                System.out.println("Уникальное имя файла аудиофайла: " + uniqueFileName);
 
                 Files.copy(audio.getInputStream(), Paths.get(filePath.toUri()), StandardCopyOption.REPLACE_EXISTING);
 
 
-
-                // Сохранение информации о файле
-//                note.setFilePath(filePath.toString()); // Можно расширить для работы с несколькими файлами
-//                note.setFileType(detectFileType(originalFileName));
-
                 NoteAudio newNoteAudioFile = new NoteAudio();
-                newNoteAudioFile.setAudioFileName(originalFileName+".mp3");
-                newNoteAudioFile.setAudioFilePath(filePath.toString());
+                newNoteAudioFile.setAudioFileName(uniqueFileName);
+                newNoteAudioFile.setAudioFilePath(publicPath + uniqueFileName);
                 newNoteAudioFile.setNote(note);
+                if (note.getAudios() == null) {
+                    note.setAudios(new ArrayList<>());
+                }
+                note.getAudios().add(newNoteAudioFile);
+
                 noteRepository.save(note);
-
-
                 List<NoteAudio> newAudioFileList = note.getAudios();
 
-                // TODO перенести за пределы цикла, переделать сбор аудио
-                newAudioFileList.add(newNoteAudioFile);
+//                // TODO перенести за пределы цикла, переделать сбор аудио
+//                newAudioFileList.add(newNoteAudioFile);
 
             } catch (IOException e) {
                 throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);

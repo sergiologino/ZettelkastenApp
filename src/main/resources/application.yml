@@ -65,6 +65,8 @@ file:
   storage-path: /Users/savki/uploaded/uploaded-files
 audio:
   storage-path: /Users/savki/uploaded/uploaded-audios
+  storage-public-path: /files
+  storage-directory: E:/uploaded
 open-graph-data:
   enabled: true
 

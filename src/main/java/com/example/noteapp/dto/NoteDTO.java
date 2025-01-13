@@ -2,12 +2,13 @@ package com.example.noteapp.dto;
 
 
 import com.example.noteapp.model.OpenGraphData;
+import lombok.Getter;
+import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
+@Getter
+@Setter
 public class NoteDTO {
 
 
@@ -41,6 +42,10 @@ public class NoteDTO {
 
     private Long y;
 
+    private Integer width;
+
+    private Integer height;
+
     private List<NoteFileDTO> files;
 
     private List<NoteAudioDTO> audios;
@@ -49,7 +54,7 @@ public class NoteDTO {
 
     public NoteDTO() {}
 
-    public NoteDTO(String content, List<String> url, String audioFilePath, String recognizedText, String annotation, boolean aiSummary, UUID projectId, List<String> tags, String filePath, String fileType, boolean analyze, String neuralNetwork, Long x, Long y) {
+    public NoteDTO(String content, List<String> url, String audioFilePath, String recognizedText, String annotation, boolean aiSummary, UUID projectId, List<String> tags, String filePath, String fileType, boolean analyze, String neuralNetwork, Long x, Long y, Integer width, Integer height, List<NoteFileDTO> files, List<NoteAudioDTO> audios) {
         this.id = UUID.randomUUID();
         this.content = content;
         this.urls = urls;
@@ -67,6 +72,14 @@ public class NoteDTO {
         this.y = y;
         this.files = new ArrayList<>();
         this.audios = new ArrayList<>();
+        this.openGraphData = new HashMap<>();
+        this.x = null;
+        this.y = null;
+        this.width = null;
+        this.height = null;
+        this.files = null;
+        this.audios = null;
+        this.openGraphData = null;
 
     }
 

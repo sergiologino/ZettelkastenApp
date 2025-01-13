@@ -1,22 +1,26 @@
 package com.example.noteapp.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.UUID;
 
-
+@Getter
+@Setter
 public class NoteAudioDTO implements Serializable {
+    // Геттеры и сеттеры
+    @Setter
+    @Getter
     private UUID id;
     private String name;
     private String url;
 
-    // Геттеры и сеттеры
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
+    @Setter
+    @Getter
+    private String type;
+    private BigDecimal size;
 
     public String getAudioName() {
         return name;
