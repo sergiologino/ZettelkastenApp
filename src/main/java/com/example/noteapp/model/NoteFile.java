@@ -1,5 +1,6 @@
 package com.example.noteapp.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
@@ -21,6 +22,7 @@ public class NoteFile {
     //@JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
+    @JsonBackReference // Указывает, что это обратная ссылка
     private Note note;
 
     public NoteFile() {

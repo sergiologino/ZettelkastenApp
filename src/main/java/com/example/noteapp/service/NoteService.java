@@ -1,22 +1,17 @@
 package com.example.noteapp.service;
 
-import com.example.noteapp.dto.NoteAudioDTO;
-import com.example.noteapp.dto.NoteDTO;
-import com.example.noteapp.dto.NoteFileDTO;
 import com.example.noteapp.integration.IntegrationException;
 import com.example.noteapp.integration.IntegrationService;
-import com.example.noteapp.mapper.AbstractConverter;
-//import com.example.noteapp.mapper.NoteConverter;
-import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.*;
 import com.example.noteapp.repository.NoteRepository;
 import com.example.noteapp.repository.OpenGraphDataRepository;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -26,16 +21,15 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.stream.Collectors;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
 
 
 
 @Service
 public class NoteService {
 
+//    private final NoteConverter noteConverter;
     @Value("${file.storage-path}")
     private String fileStoragePath;
 
@@ -67,14 +61,23 @@ public class NoteService {
         this.projectService = projectService;
        // this.noteConverter = noteConverter;
         this.openGraphDataRepository = openGraphDataRepository;
+//        this.noteConverter = noteConverter;
     }
 
     public List<Note> getAllNotes() {
         return noteRepository.findAll();
     }
 
-    public Note getNoteById(UUID id) {
-        return noteRepository.findById(id).orElseThrow(() -> new RuntimeException("Note not found"));
+    public Note getNoteById(UUID id, HttpServletRequest request) {
+        Note note = noteRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Note not found with id: " + id));
+
+        // Формируем полный URL для аудиофайлов
+        note.getAudios().forEach(audio -> {
+            audio.setUrl(generateFullAudioUrl(request, audio.getAudioFilePath()));
+        });
+
+        return note;
     }
 
     public Note saveNote(Note note) {
@@ -220,6 +223,8 @@ public class NoteService {
                 // Удаляем существующие элементы, которые не соответствуют новым ссылкам
                 existingData.removeIf(data -> !links.contains(data.getUrl()));
 
+
+
                 // Добавляем новые OpenGraph данные
                 List<String> existingUrls = existingData.stream()
                         .map(OpenGraphData::getUrl)
@@ -338,6 +343,35 @@ public class NoteService {
             ogData.setImage(getMetaTagContent(document, "og:image"));
             ogData.setNote(note);
             System.out.println("Успешно загружены OpenGraph данные: " + ogData.getTitle());
+            return ogData;
+        } catch (IOException e) {
+            System.err.println("Ошибка при обработке Open Graph: " + url);
+            e.printStackTrace(); // Добавлено для отладки
+            return null;
+        }
+    }
+
+
+    // получаем OpenGraph без привязки к заметке
+    public OpenGraphData fetchOpenGraphDataClear(String url) {
+
+        try {
+            // Проверяем, является ли URL корректным
+            if (!isValidUrl(url)) {
+                throw new IllegalArgumentException("Некорректный URL: " + url);
+            }
+            System.out.println("Загрузка OpenGraph данных для: " + url);
+
+            Document document = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                    .get();
+            OpenGraphData ogData = new OpenGraphData();
+            ogData.setUrl(url);
+            ogData.setTitle(getMetaTagContent(document, "og:title"));
+            ogData.setDescription(getMetaTagContent(document, "og:description"));
+            ogData.setImage(getMetaTagContent(document, "og:image"));
+
+            System.out.println("Успешно получены OpenGraph данные: " + ogData.getTitle());
             return ogData;
         } catch (IOException e) {
             System.err.println("Ошибка при обработке Open Graph: " + url);
@@ -469,14 +503,16 @@ public class NoteService {
         return projectGroupNote;
     }
 
-    public List<Note> getNotesByProjectId(UUID projectId) {
+    public List<Note> getNotesByProjectId(UUID projectId, HttpServletRequest request) {
         List<Note> foundedNotes = noteRepository.findAllByProjectId(projectId);
-//        for (Note note : foundedNotes) {
-//            note.setProject(projectService.getProjectById(note.getProject().getId()));
-//        }
+//
         for (Note note : foundedNotes) {
             note.setAudios(noteRepository.findAudiosByNoteId(note.getId()));
             note.setFiles(noteRepository.findFilesByNoteId(note.getId()));
+
+            note.getAudios().forEach(audio -> {
+                audio.setUrl(generateFullAudioUrl(request, audio.getAudioFilePath()));
+            });
         }
         return foundedNotes;
     }
@@ -594,7 +630,8 @@ public class NoteService {
                         ? contentType.substring("audio/".length())
                         : "unknown";
 
-                String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName + "." + extension;
+                //String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName  + "." + extension;
+                String uniqueFileName = originalFileName; //  + "." + extension;
 
                 Path filePath = uploadPath.resolve(uniqueFileName);
 
@@ -668,5 +705,12 @@ public class NoteService {
     public List<String> getAllUniqueTags() {
         return noteRepository.findAllUniqueTags();
     }
+
+    public String generateFullAudioUrl(HttpServletRequest request, String relativePath) {
+        String baseUrl = String.format("%s://%s:%d", request.getScheme(), request.getServerName(), request.getServerPort());
+        return baseUrl + relativePath;
+    }
+
+
 
 }

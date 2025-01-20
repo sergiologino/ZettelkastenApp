@@ -17,6 +17,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.util.Objects;
+
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,13 +104,24 @@ public class NoteController {
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
     @PutMapping
-    public Note updateNote(@RequestBody NoteDTO noteDTO ) {
+    public Note updateNote(@RequestBody NoteDTO noteDTO, HttpServletRequest request) {
 
        noteDTO.setNeuralNetwork("YandexGPT-Lite");
        noteDTO.setAnalyze(true);
 
        List<String> urls=noteDTO.getUrls();
-       Note note=noteService.getNoteById(noteDTO.getId());
+        // Извлечение URL из ключей OpenGraphData и добавление в список urls
+        if (noteDTO.getOpenGraphData() != null) {
+            noteDTO.getOpenGraphData().keySet().forEach(url -> {
+                if (!urls.contains(url)) {
+                    urls.add(url);
+                }
+            });
+        }
+
+
+
+        Note note=noteService.getNoteById(noteDTO.getId(), request);
 
        noteService.updateNote(noteConverter.toEntity(noteDTO),urls);
 //       Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDTO.getUrls());
@@ -201,10 +214,10 @@ public class NoteController {
                         .collect(Collectors.toList());
                 if (openGraphData != null) {
 
-                    String title = "Заголовок OpenGraph";
-                    String description = "Описание OpenGraph";
-//                    String title = openGraphData.getTitle() != null ? openGraphData.getTitle() : "";
-//                    String description = openGraphData.getDescription() != null ? openGraphData.getDescription() : "";
+                    String title = "Заголовок OpenGraph: ";
+                    String description = "Описание OpenGraph: ";
+//                    String title = openGraphData.getTitle() != null ? openGraphData.getTitle() : " нет заголовка";
+//                    String description = openGraphData.getDescription() != null ? openGraphData.getDescription() : "нет описания";
                     note.setContent(title + "\n" + description + "\n\n" + content); // Формируем полный контент
 
                 }
@@ -282,8 +295,8 @@ public class NoteController {
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
     @GetMapping("/{id}")
-    public Note getNoteById(@PathVariable UUID id) {
-        return noteService.getNoteById(id);
+    public Note getNoteById(@PathVariable UUID id, HttpServletRequest request) {
+        return noteService.getNoteById(id, request);
     }
 
     @PutMapping("/group/analyze")
@@ -307,8 +320,8 @@ public class NoteController {
     }
 
     @GetMapping("/{projectId}/notes")
-    public List<NoteDTO> getNotesByProject(@PathVariable UUID projectId) {
-        List<Note> notes = noteService.getNotesByProjectId(projectId);
+    public List<NoteDTO> getNotesByProject(@PathVariable UUID projectId, HttpServletRequest request) {
+        List<Note> notes = noteService.getNotesByProjectId(projectId, request);
 
 
         return notes.stream()
@@ -356,10 +369,10 @@ public class NoteController {
                     )
             }
     )
-    @GetMapping("/og-data")
+    @GetMapping("/og-data-clear")
     public ResponseEntity<OpenGraphData> getOpenGraphDataByUrl(@RequestParam String url) {
         try {
-            OpenGraphData openGraphData = noteService.getOpenGraphDataByUrl(url);
+            OpenGraphData openGraphData = noteService.fetchOpenGraphDataClear(url);
             return ResponseEntity.ok(openGraphData);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
@@ -440,7 +453,6 @@ public class NoteController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
 
 }
 

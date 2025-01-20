@@ -18,7 +18,7 @@ public class Note {
     private UUID id;
 
     @NotNull(message = "Текст заметки обязателен.")
-    @Column(nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
     @Column(nullable = true)
@@ -93,9 +93,11 @@ public class Note {
     private List<OpenGraphData> openGraphData = new ArrayList<>();;
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference // Указывает, что это основная связь
     private List<NoteFile> files = new ArrayList<>();
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference // Указывает, что это основная связь
     private List<NoteAudio> audios = new ArrayList<>();
 
 

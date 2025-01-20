@@ -1,5 +1,6 @@
 package com.example.noteapp.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.persistence.GeneratedValue;
@@ -19,6 +20,9 @@ public class NoteAudio {
     @Column(nullable = false)
     private String serverFilePath;
 
+    @Column(nullable = true)
+    private String url;
+
     @Column(nullable = false)
     private String originalName;
 
@@ -31,6 +35,7 @@ public class NoteAudio {
     //@JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
+    @JsonBackReference // Указывает, что это обратная ссылка
     private Note note;
 
     public NoteAudio() {
@@ -44,6 +49,31 @@ public class NoteAudio {
     }
 
     // Геттеры и сеттеры
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getServerFilePath() {
+        return serverFilePath;
+    }
+
+    public void setServerFilePath(String serverFilePath) {
+        this.serverFilePath = serverFilePath;
+    }
+
+    public String getOriginalName() {
+        return originalName;
+    }
+
+    public void setOriginalName(String originalName) {
+        this.originalName = originalName;
+    }
+
 
     public UUID getId() {
         return id;
