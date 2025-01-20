@@ -211,44 +211,50 @@ public class NoteService {
 
     @Transactional
     public Note updateNote(Note note, List<String> links) {
-//        Note existedNote = noteRepository.findById(note.getId()).orElseThrow(() -> new RuntimeException("Note not found"));
-//        List<OpenGraphData> existingData = note.getOpenGraphData() != null ? note.getOpenGraphData() : new ArrayList<>();
-
         boolean useOpenGraph = openGraphDataEnabled;
         if (useOpenGraph) {
             if (links != null && !links.isEmpty()) {
-                // Получаем текущую коллекцию
+                // Получаем текущую коллекцию OpenGraph данных для заметки
                 List<OpenGraphData> existingData = openGraphDataRepository.findByNoteId(note.getId());
 
-                // Удаляем существующие элементы, которые не соответствуют новым ссылкам
+                // Выделяем данные для удаления: те, что не содержатся в новых ссылках
+                List<OpenGraphData> dataToDelete = existingData.stream()
+                        .filter(data -> !links.contains(data.getUrl()))
+                        .collect(Collectors.toList());
+
+                // Удаляем данные из базы
+                if (!dataToDelete.isEmpty()) {
+                    openGraphDataRepository.deleteAll(dataToDelete);
+                }
+
+                // Обновляем текущую коллекцию: удаляем записи, которых больше нет в новых ссылках
                 existingData.removeIf(data -> !links.contains(data.getUrl()));
-
-
 
                 // Добавляем новые OpenGraph данные
                 List<String> existingUrls = existingData.stream()
                         .map(OpenGraphData::getUrl)
                         .collect(Collectors.toList());
                 links.stream()
-                        .filter(link -> !existingUrls.contains(link))
-                        .map(link -> fetchOpenGraphData(link, note))
-                        .filter(Objects::nonNull)
+                        .filter(link -> !existingUrls.contains(link)) // Только новые ссылки
+                        .map(link -> fetchOpenGraphData(link, note)) // Получаем OpenGraphData
+                        .filter(Objects::nonNull) // Исключаем null
                         .forEach(existingData::add); // Добавляем в существующую коллекцию
 
                 System.out.println("existingData содержит: " + existingData); // проверяем что получилось в existingData
 
-                // Добавляем данные в объект Note
+                // Обновляем объект Note
+                note.getOpenGraphData().clear();
                 note.getOpenGraphData().addAll(existingData);
 
-                // Сохраняем данные в базу через репозиторий
+                // Сохраняем обновленные данные в базе
                 openGraphDataRepository.saveAll(existingData);
-
             }
         }
+
+        // Сохраняем заметку
         noteRepository.save(note);
 
         return note;
-
     }
 
 
@@ -512,13 +518,15 @@ public class NoteService {
 
 
             note.getAudios().forEach(audio -> {
-                audio.setUrl(generateFullAudioUrl(request, audio.getAudioFilePath()));
+//                audio.setUrl(generateFullAudioUrl(request, audio.getAudioFilePath()));
+                audio.setUrl("/api/notes/download/audio/" + audio.getAudioFileName());
                 System.out.println("audio URL: " + audio.getUrl());
 
             });
 
             note.getFiles().forEach(file -> {
-                file.setUrl(generateFullAudioUrl(request, file.getUrl()));
+//                file.setUrl(generateFullAudioUrl(request, file.getUrl()));
+                file.setUrl("/api/notes/download/file/" + file.getFileName()); // Генерация ссылки для скачивания
                 System.out.println("file URL: " + file.getUrl());
             });
         }

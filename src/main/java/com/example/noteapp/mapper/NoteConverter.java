@@ -71,13 +71,7 @@ public class NoteConverter extends AbstractConverter {
                 note.setOpenGraphData(openGraphDataList);
             }
 
-//            note.setFiles(dto.getFiles().stream()
-//                    .map(noteFileConverter::toEntity)
-//                    .collect(Collectors.toList()));
-//
-//            note.setAudios(dto.getAudios().stream()
-//                    .map(noteAudioConverter::toEntity)
-//                    .collect(Collectors.toList()));
+
 
 //TODO снять комментарий после преобразования audios и files в массив на фронте
 //            note.setFiles(dto.getFiles().stream()
@@ -115,6 +109,7 @@ public class NoteConverter extends AbstractConverter {
             newNoteDTO.setY(note.getPositionY());
             newNoteDTO.setWidth(note.getWidth());
             newNoteDTO.setHeight(note.getHeight());
+            newNoteDTO.setUrls(new ArrayList<String>());
 
             if (note.getOpenGraphData() != null) {
                 Map<String, OpenGraphData> openGraphDataMap = note.getOpenGraphData().stream()

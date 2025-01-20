@@ -54,7 +54,7 @@ public class NoteDTO {
 
     public NoteDTO() {}
 
-    public NoteDTO(String content, List<String> url, String audioFilePath, String recognizedText, String annotation, boolean aiSummary, UUID projectId, List<String> tags, String filePath, String fileType, boolean analyze, String neuralNetwork, Long x, Long y, Integer width, Integer height, List<NoteFileDTO> files, List<NoteAudioDTO> audios) {
+    public NoteDTO(String content, List<String> url, String audioFilePath, String recognizedText, String annotation, boolean aiSummary, UUID projectId, List<String> tags, String filePath, String fileType, boolean analyze, String neuralNetwork, Long x, Long y, Integer width, Integer height, List<NoteFileDTO> files, List<NoteAudioDTO> audios, List<String> urls,  Map<String, OpenGraphData> openGraphData) {
         this.id = UUID.randomUUID();
         this.content = content;
         this.urls = urls;

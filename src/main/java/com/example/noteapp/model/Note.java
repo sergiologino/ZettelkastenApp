@@ -66,22 +66,6 @@ public class Note {
     @Column(name="position_y", nullable = true)
     private Long positionY;
 
-    public Integer getWidth() {
-        return width;
-    }
-
-    public Integer getHeight() {
-        return height;
-    }
-
-    public void setWidth(Integer width) {
-        this.width = width;
-    }
-
-    public void setHeight(Integer height) {
-        this.height = height;
-    }
-
     @Column(name="width", nullable = true)
     private Integer width;
 
@@ -106,6 +90,18 @@ public class Note {
     }
 
     //Setters and Getters
+
+    public Integer getWidth() {return width;}
+
+    public Integer getHeight() {return height;}
+
+    public void setWidth(Integer width) {
+        this.width = width;
+    }
+
+    public void setHeight(Integer height) {
+        this.height = height;
+    }
 
     public List<OpenGraphData> getOpenGraphData() {
         return openGraphData;

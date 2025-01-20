@@ -1,14 +1,11 @@
 package com.example.noteapp.controller;
 
-import com.example.noteapp.dto.NoteAudioDTO;
 import com.example.noteapp.dto.NoteDTO;
-import com.example.noteapp.dto.NoteFileDTO;
 import com.example.noteapp.dto.OpenGraphRequest;
 import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.Note;
 import com.example.noteapp.model.OpenGraphData;
 import com.example.noteapp.model.Project;
-import com.example.noteapp.repository.ProjectRepository;
 import com.example.noteapp.service.NoteService;
 import com.example.noteapp.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,20 +13,24 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import java.util.Objects;
+
+import java.net.MalformedURLException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.MediaType;
+
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -40,14 +41,14 @@ public class NoteController {
     private final NoteService noteService;
     private final ProjectService projectService;
     private final NoteConverter noteConverter;
-    private final ProjectRepository projectRepository;
 
 
-    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter, ProjectRepository projectRepository) {
+
+    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter) {
         this.noteService = noteService;
         this.projectService = projectService;
         this.noteConverter = noteConverter;
-        this.projectRepository = projectRepository;
+
     }
 
     @Operation(summary = "Переместить заметку в другой проект", description = "Перемещает заметку между проектами.")
@@ -108,25 +109,33 @@ public class NoteController {
 
        noteDTO.setNeuralNetwork("YandexGPT-Lite");
        noteDTO.setAnalyze(true);
+       List<String> urls = new ArrayList<>();
 
-       List<String> urls=noteDTO.getUrls();
-        // Извлечение URL из ключей OpenGraphData и добавление в список urls
-        if (noteDTO.getOpenGraphData() != null) {
-            noteDTO.getOpenGraphData().keySet().forEach(url -> {
-                if (!urls.contains(url)) {
-                    urls.add(url);
-                }
-            });
+        if (noteDTO.getUrls()!=null && !noteDTO.getUrls().isEmpty()) {
+            for (String url : noteDTO.getUrls()) {
+                urls.add(url);
+            }
         }
 
+           // Извлечение URL из ключей OpenGraphData и добавление в список urls
+           if (noteDTO.getOpenGraphData() != null) {
+               noteDTO.getOpenGraphData().keySet().forEach(url -> {
 
+                   if (!urls.contains(url)) {
+                       System.out.println("Нет такого урла, добавляем! " + url);
+
+                       urls.add(url);
+                   } else {
+                       System.out.println("Такой урл есть, пропускаем! " + url);
+                   }
+               });
+           }
 
         Note note=noteService.getNoteById(noteDTO.getId(), request);
 
-       noteService.updateNote(noteConverter.toEntity(noteDTO),urls);
-//       Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDTO.getUrls());
-//       noteDTO.setOpenGraphData(openGraphData);
-       return note;
+        noteService.updateNote(noteConverter.toEntity(noteDTO),urls);
+
+        return note;
     }
 
     @Operation(summary = "Создать новую заметку", description = "Создает новую заметку. Может содержать текст, файл или голосовой файл.")
@@ -147,20 +156,12 @@ public class NoteController {
             }
             // Проверяем, что проект указан
             // ЕСЛИ НЕТ  - ТО СТАВИМ ДЕФОЛТНЫЙ
-            if (noteDto.getProjectId() == null) {
-                Project newProject = projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3"));
-                //return ResponseEntity.badRequest().body("Проект обязателен для создания заметки.");
-            }
+
             //--------------------- ЗАГЛУШКИ ---------------------------
             noteDto.setNeuralNetwork("YandexGPT-Lite");
             noteDto.setAnalyze(true);
 
-//
-//            if (noteDto.getUrl() != null && !noteDto.getUrl().isEmpty()) {
-//                // Обрабатываем ссылки и получаем Open Graph данные
-//                Map<String, OpenGraphData> openGraphData = noteService.processOpenGraphData(noteDto.getUrl());
-//                noteDto.setOpenGraphData(openGraphData);
-//            }
+
             Note savedNote = noteService.createNote(noteConverter.toEntity(noteDto), noteDto.getUrls());
             NoteDTO newNoteDTO = noteConverter.toDTO(savedNote);
 
@@ -451,6 +452,45 @@ public class NoteController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    @GetMapping("/download/audio/{filename:.+}")
+    public ResponseEntity<Resource> downloadAudioFile(@PathVariable String filename) {
+        Path filePath = Paths.get("E:/uploaded/uploaded-audio").resolve(filename).normalize();
+        System.out.println("Эндпойнт /download/audio/{filename downloadAudioFile: "+filePath);
+
+        try {
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+        } catch (MalformedURLException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/download/file/{filename:.+}")
+    public ResponseEntity<Resource> downloadFile(@PathVariable String filename) {
+        Path filePath = Paths.get("E:/uploaded/uploaded-files").resolve(filename).normalize();
+        System.out.println("Эндпойнт /download/file/filename downloadFile: "+filePath);
+
+        try {
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+        } catch (MalformedURLException e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 
