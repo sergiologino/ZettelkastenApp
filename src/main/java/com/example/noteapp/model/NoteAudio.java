@@ -50,13 +50,7 @@ public class NoteAudio {
 
     // Геттеры и сеттеры
 
-    public String getUrl() {
-        return url;
-    }
 
-    public void setUrl(String url) {
-        this.url = url;
-    }
 
     public String getServerFilePath() {
         return serverFilePath;
@@ -74,6 +68,13 @@ public class NoteAudio {
         this.originalName = originalName;
     }
 
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
 
     public UUID getId() {
         return id;

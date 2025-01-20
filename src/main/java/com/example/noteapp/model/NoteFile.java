@@ -16,6 +16,11 @@ public class NoteFile {
     @Column(nullable = false)
     private String serverFilePath;
 
+
+
+    @Column(nullable = true)
+    private String url;
+
     @Column(nullable = false)
     private String originalName;
 
@@ -82,6 +87,14 @@ public class NoteFile {
 
     public void setOriginalName(String originalName) {
         this.originalName = originalName;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     // Геттеры и сеттеры

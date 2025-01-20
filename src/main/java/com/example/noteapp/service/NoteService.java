@@ -510,8 +510,16 @@ public class NoteService {
             note.setAudios(noteRepository.findAudiosByNoteId(note.getId()));
             note.setFiles(noteRepository.findFilesByNoteId(note.getId()));
 
+
             note.getAudios().forEach(audio -> {
                 audio.setUrl(generateFullAudioUrl(request, audio.getAudioFilePath()));
+                System.out.println("audio URL: " + audio.getUrl());
+
+            });
+
+            note.getFiles().forEach(file -> {
+                file.setUrl(generateFullAudioUrl(request, file.getUrl()));
+                System.out.println("file URL: " + file.getUrl());
             });
         }
         return foundedNotes;
@@ -548,6 +556,11 @@ public class NoteService {
     @Transactional
     public Note addFilesToNote(UUID noteId, List<MultipartFile> files) {
         Note note = noteRepository.findById(noteId).orElseThrow(() -> new RuntimeException("Note not found"));
+        if(files.isEmpty() || files ==null){
+            System.out.println("files not present in endpoint");
+        }
+
+        String publicPath = "/files/audio/";
 
         for (MultipartFile file : files) {
             try {
@@ -560,8 +573,9 @@ public class NoteService {
                 }
 
                 // Уникальное имя файла
-                String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
-                String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName;
+                String originalFileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
+//                String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName;
+                String uniqueFileName =  originalFileName;
 
                 Path filePath = uploadPath.resolve(uniqueFileName);
                 Files.copy(file.getInputStream(), filePath);
@@ -580,8 +594,9 @@ public class NoteService {
 
                 NoteFile newNoteFile = new NoteFile();
                 newNoteFile.setFileName(originalFileName);
-                newNoteFile.setFilePath(filePath.toString());
+                newNoteFile.setFilePath(publicPath + uniqueFileName);
                 newNoteFile.setNote(note);
+
                 noteRepository.save(note);
 
 
@@ -595,7 +610,6 @@ public class NoteService {
                 throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
             }
         }
-        //UUID id, String filePath, String fileName, Note note
 
         return noteRepository.save(note);
     }
@@ -606,11 +620,8 @@ public class NoteService {
         if(audios.isEmpty() || audios ==null){
             System.out.println("audios not present in endpoint");
         }
-        System.out.println("Аудиофайл на входе: " + audios.toString());
-        System.out.println("Размер аудиофайла: " + audios.size());
 
         String publicPath = "/files/audio/";
-
 
         for (MultipartFile audio : audios) {
             try {
@@ -642,6 +653,7 @@ public class NoteService {
                 newNoteAudioFile.setAudioFileName(uniqueFileName);
                 newNoteAudioFile.setAudioFilePath(publicPath + uniqueFileName);
                 newNoteAudioFile.setNote(note);
+
                 if (note.getAudios() == null) {
                     note.setAudios(new ArrayList<>());
                 }
@@ -650,9 +662,7 @@ public class NoteService {
                 noteRepository.save(note);
                 List<NoteAudio> newAudioFileList = note.getAudios();
 
-//                // TODO перенести за пределы цикла, переделать сбор аудио
-//                newAudioFileList.add(newNoteAudioFile);
-
+//
             } catch (IOException e) {
                 throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
             }
