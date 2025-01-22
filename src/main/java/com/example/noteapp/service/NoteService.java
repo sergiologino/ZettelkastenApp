@@ -75,6 +75,17 @@ public class NoteService {
         // Формируем полный URL для аудиофайлов
         note.getAudios().forEach(audio -> {
             audio.setUrl(generateFullAudioUrl(request, audio.getAudioFilePath()));
+            System.out.println("current audiofileName: "+audio.getAudioFileName());
+            System.out.println("current filePath: "+audio.getAudioFilePath());
+            System.out.println("set URL for File: "+audio.getUrl());
+        });
+
+        // Формируем полный URL для аудиофайлов
+        note.getFiles().forEach(file -> {
+            file.setUrl(generateFullAudioUrl(request, file.getFilePath()));
+            System.out.println("current fileName: "+file.getFileName());
+            System.out.println("current filePath: "+file.getFilePath());
+            System.out.println("set URL for File: "+file.getUrl());
         });
 
         return note;
@@ -366,7 +377,7 @@ public class NoteService {
             if (!isValidUrl(url)) {
                 throw new IllegalArgumentException("Некорректный URL: " + url);
             }
-            System.out.println("Загрузка OpenGraph данных для: " + url);
+//            System.out.println("Загрузка OpenGraph данных для: " + url);
 
             Document document = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
@@ -377,7 +388,7 @@ public class NoteService {
             ogData.setDescription(getMetaTagContent(document, "og:description"));
             ogData.setImage(getMetaTagContent(document, "og:image"));
 
-            System.out.println("Успешно получены OpenGraph данные: " + ogData.getTitle());
+//            System.out.println("Успешно получены OpenGraph данные: " + ogData.getTitle());
             return ogData;
         } catch (IOException e) {
             System.err.println("Ошибка при обработке Open Graph: " + url);
@@ -525,7 +536,7 @@ public class NoteService {
             });
 
             note.getFiles().forEach(file -> {
-//                file.setUrl(generateFullAudioUrl(request, file.getUrl()));
+//                file.setUrl(generateFullFileUrl(request, file.getUrl()));
                 file.setUrl("/api/notes/download/file/" + file.getFileName()); // Генерация ссылки для скачивания
                 System.out.println("file URL: " + file.getUrl());
             });
@@ -568,7 +579,7 @@ public class NoteService {
             System.out.println("files not present in endpoint");
         }
 
-        String publicPath = "/files/audio/";
+        String publicPath = "/files/files/";
 
         for (MultipartFile file : files) {
             try {
@@ -582,11 +593,11 @@ public class NoteService {
 
                 // Уникальное имя файла
                 String originalFileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
-//                String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName;
-                String uniqueFileName =  originalFileName;
+                String uniqueFileName = noteId + "_" + originalFileName;
+//                String uniqueFileName =  originalFileName;
 
                 Path filePath = uploadPath.resolve(uniqueFileName);
-                Files.copy(file.getInputStream(), filePath);
+//                Files.copy(file.getInputStream(), filePath);
 
                 System.out.println("Оригинальное имя файла: " + file.getOriginalFilename());
                 System.out.println("Директория загрузки: " + uploadDir);
@@ -596,21 +607,20 @@ public class NoteService {
 
                 Files.copy(file.getInputStream(), Paths.get(filePath.toUri()),StandardCopyOption.REPLACE_EXISTING);
 
-                // Сохранение информации о файле
-                note.setFilePath(filePath.toString());
-                note.setFileType(detectFileType(originalFileName));
 
                 NoteFile newNoteFile = new NoteFile();
                 newNoteFile.setFileName(originalFileName);
-                newNoteFile.setFilePath(publicPath + uniqueFileName);
+                newNoteFile.setFilePath(uploadPath + uniqueFileName);
+                newNoteFile.setUrl(publicPath + uniqueFileName);
                 newNoteFile.setNote(note);
 
+                if (note.getFiles() == null) {
+                    note.setFiles(new ArrayList<>());
+                }
+
+                note.getFiles().add(newNoteFile);
+
                 noteRepository.save(note);
-
-
-                List<NoteFile> newFileList = note.getFiles();
-                newFileList.add(newNoteFile);
-                note.setFiles(newFileList);
 
 
 
@@ -624,6 +634,7 @@ public class NoteService {
 
     @Transactional
     public Note addAudiosToNote(UUID noteId, List<MultipartFile> audios) {
+        System.out.println("Добавляем аудио в заметку (addAudiosToNote)");
         Note note = noteRepository.findById(noteId).orElseThrow(() -> new RuntimeException("Note not found"));
         if(audios.isEmpty() || audios ==null){
             System.out.println("audios not present in endpoint");
@@ -650,7 +661,7 @@ public class NoteService {
                         : "unknown";
 
                 //String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName  + "." + extension;
-                String uniqueFileName = originalFileName; //  + "." + extension;
+                String uniqueFileName = noteId+"_"+originalFileName; //  + "." + extension;
 
                 Path filePath = uploadPath.resolve(uniqueFileName);
 
@@ -668,7 +679,7 @@ public class NoteService {
                 note.getAudios().add(newNoteAudioFile);
 
                 noteRepository.save(note);
-                List<NoteAudio> newAudioFileList = note.getAudios();
+
 
 //
             } catch (IOException e) {
@@ -725,6 +736,11 @@ public class NoteService {
     }
 
     public String generateFullAudioUrl(HttpServletRequest request, String relativePath) {
+        String baseUrl = String.format("%s://%s:%d", request.getScheme(), request.getServerName(), request.getServerPort());
+        return baseUrl + relativePath;
+    }
+
+    public String generateFullFileUrl(HttpServletRequest request, String relativePath) {
         String baseUrl = String.format("%s://%s:%d", request.getScheme(), request.getServerName(), request.getServerPort());
         return baseUrl + relativePath;
     }

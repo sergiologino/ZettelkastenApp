@@ -41,11 +41,12 @@ public class NoteAudio {
     public NoteAudio() {
     }
 
-    public NoteAudio(UUID id, String filePath, String fileName, Note note) {
+    public NoteAudio(UUID id, String filePath, String fileName, Note note, String url) {
         this.id = id;
         this.serverFilePath = filePath;
         this.originalName = fileName;
         this.note = note;
+        this.url = url;
     }
 
     // Геттеры и сеттеры
@@ -68,13 +69,9 @@ public class NoteAudio {
         this.originalName = originalName;
     }
 
-    public String getUrl() {
-        return url;
-    }
+    public String getUrl() { return url; }
 
-    public void setUrl(String url) {
-        this.url = url;
-    }
+    public void setUrl(String url) { this.url = url; }
 
     public UUID getId() {
         return id;

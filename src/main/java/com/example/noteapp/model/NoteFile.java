@@ -19,7 +19,7 @@ public class NoteFile {
 
 
     @Column(nullable = true)
-    private String url;
+    private String fileUrl;
 
     @Column(nullable = false)
     private String originalName;
@@ -33,11 +33,12 @@ public class NoteFile {
     public NoteFile() {
     }
 
-    public NoteFile(UUID id, String filePath, String fileName, Note note) {
+    public NoteFile(UUID id, String filePath, String fileName, Note note, String fileUrl) {
         this.id = id;
         this.serverFilePath = filePath;
         this.originalName = fileName;
         this.note = note;
+        this.fileUrl = fileUrl;
     }
 
     public UUID getId() {
@@ -89,14 +90,10 @@ public class NoteFile {
         this.originalName = originalName;
     }
 
-    public String getUrl() {
-        return url;
-    }
+    public String getUrl() {return fileUrl; }
 
-    public void setUrl(String url) {
-        this.url = url;
-    }
+    public void setUrl(String fileUrl) { this.fileUrl = fileUrl; }
 
-    // Геттеры и сеттеры
+
 }
 

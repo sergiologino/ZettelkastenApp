@@ -2,6 +2,7 @@ package com.example.noteapp.dto;
 
 
 import com.example.noteapp.model.OpenGraphData;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,6 +17,7 @@ public class NoteDTO {
 
     private String content;
 
+    @JsonProperty("urls")
     private List<String> urls;
 
     private String audioFilePath;
@@ -143,9 +145,7 @@ public class NoteDTO {
         return urls;
     }
 
-    public String getAudioFilePath() {
-        return audioFilePath;
-    }
+    public String getAudioFilePath() { return audioFilePath; }
 
     public String getRecognizedText() {
         return recognizedText;

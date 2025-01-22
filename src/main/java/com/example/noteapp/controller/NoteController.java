@@ -109,11 +109,11 @@ public class NoteController {
 
        noteDTO.setNeuralNetwork("YandexGPT-Lite");
        noteDTO.setAnalyze(true);
-       List<String> urls = new ArrayList<>();
+       List<String> newUrls = new ArrayList<>();
 
         if (noteDTO.getUrls()!=null && !noteDTO.getUrls().isEmpty()) {
             for (String url : noteDTO.getUrls()) {
-                urls.add(url);
+                newUrls.add(url);
             }
         }
 
@@ -121,10 +121,10 @@ public class NoteController {
            if (noteDTO.getOpenGraphData() != null) {
                noteDTO.getOpenGraphData().keySet().forEach(url -> {
 
-                   if (!urls.contains(url)) {
+                   if (!newUrls.contains(url)) {
                        System.out.println("Нет такого урла, добавляем! " + url);
 
-                       urls.add(url);
+                       newUrls.add(url);
                    } else {
                        System.out.println("Такой урл есть, пропускаем! " + url);
                    }
@@ -133,7 +133,7 @@ public class NoteController {
 
         Note note=noteService.getNoteById(noteDTO.getId(), request);
 
-        noteService.updateNote(noteConverter.toEntity(noteDTO),urls);
+        noteService.updateNote(noteConverter.toEntity(noteDTO),newUrls);
 
         return note;
     }
@@ -457,7 +457,7 @@ public class NoteController {
     @GetMapping("/download/audio/{filename:.+}")
     public ResponseEntity<Resource> downloadAudioFile(@PathVariable String filename) {
         Path filePath = Paths.get("E:/uploaded/uploaded-audio").resolve(filename).normalize();
-        System.out.println("Эндпойнт /download/audio/{filename downloadAudioFile: "+filePath);
+        System.out.println("Эндпойнт /download/audio/filename downloadAudioFile: "+filePath);
 
         try {
             Resource resource = new UrlResource(filePath.toUri());

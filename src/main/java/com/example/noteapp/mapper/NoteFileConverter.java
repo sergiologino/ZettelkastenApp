@@ -15,6 +15,7 @@ public class NoteFileConverter {
         dto.setId(noteFile.getId());
         dto.setFileName(noteFile.getFileName());
         dto.setFilePath(noteFile.getFilePath());
+        dto.setFileUrl(noteFile.getUrl());
         return dto;
     }
 
@@ -26,6 +27,7 @@ public class NoteFileConverter {
         noteFile.setId(dto.getId());
         noteFile.setFileName(dto.getFileName());
         noteFile.setFilePath(dto.getFilePath());
+        noteFile.setUrl(dto.getFileUrl());
         return noteFile;
     }
 }
