@@ -4,7 +4,7 @@ spring:
   application:
     name: noteapp
   datasource:
-    url: jdbc:postgresql://localhost:5432/noteapp
+    url: jdbc:postgresql://localhost:5432/note_app_db
     username: postgres
     password: postgres
   jpa:
