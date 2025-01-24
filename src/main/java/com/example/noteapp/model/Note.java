@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -16,6 +17,9 @@ public class Note {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
+
+    @Column(name="title", nullable = true)
+    private String title;
 
     @NotNull(message = "Текст заметки обязателен.")
     @Column(columnDefinition = "TEXT", nullable = false)
@@ -72,6 +76,12 @@ public class Note {
     @Column(name = "height", nullable = true)
     private Integer height;
 
+    @Column(name="created_at", nullable = true)
+    private LocalDateTime createdAt;
+
+    @Column(name="changed_at", nullable = true)
+    private LocalDateTime changedAt;
+
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<OpenGraphData> openGraphData = new ArrayList<>();;
@@ -90,6 +100,18 @@ public class Note {
     }
 
     //Setters and Getters
+
+    public String getTitle() {return title;}
+
+    public void setTitle(String title) {this.title = title;}
+
+    public LocalDateTime getCreatedAt() {return createdAt;    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {this.createdAt = createdAt;    }
+
+    public LocalDateTime getChangedAt() {return changedAt;    }
+
+    public void setChangedAt(LocalDateTime changedAt) {this.changedAt = changedAt;    }
 
     public Integer getWidth() {return width;}
 

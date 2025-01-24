@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Getter
@@ -14,6 +15,8 @@ public class NoteDTO {
 
 
     private UUID id;
+
+    private String title;
 
     private String content;
 
@@ -47,6 +50,10 @@ public class NoteDTO {
     private Integer width;
 
     private Integer height;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime changedAt;
 
     private List<NoteFileDTO> files;
 
@@ -84,6 +91,26 @@ public class NoteDTO {
         this.openGraphData = null;
 
     }
+
+    public String getTitle() {return title;    }
+
+    public void setTitle(String title) {this.title = title;}
+
+    public Integer getWidth() {return width;    }
+
+    public void setWidth(Integer width) {this.width = width;    }
+
+    public Integer getHeight() {return height;    }
+
+    public void setHeight(Integer height) {this.height = height;    }
+
+    public LocalDateTime getCreatedAt() {return createdAt;    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {this.createdAt = createdAt;    }
+
+    public LocalDateTime getChangedAt() {return changedAt;}
+
+    public void setChangedAt(LocalDateTime changedAt) {this.changedAt = changedAt;}
 
     public List<NoteFileDTO> getFiles() {
         return files;

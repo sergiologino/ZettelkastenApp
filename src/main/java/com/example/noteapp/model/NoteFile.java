@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -24,6 +25,9 @@ public class NoteFile {
     @Column(nullable = false)
     private String originalName;
 
+    @Column(name = "created_at", nullable = true)
+    private LocalDateTime createdAt;
+
     //@JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
@@ -40,6 +44,10 @@ public class NoteFile {
         this.note = note;
         this.fileUrl = fileUrl;
     }
+
+    public LocalDateTime getCreatedAt() {return createdAt;}
+
+    public void setCreatedAt(LocalDateTime createdAt) {this.createdAt = createdAt;}
 
     public UUID getId() {
         return id;

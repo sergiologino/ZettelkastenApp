@@ -55,6 +55,9 @@ public class NoteConverter extends AbstractConverter {
             note.setPositionY(dto.getY());
             note.setWidth(dto.getWidth());
             note.setHeight(dto.getHeight());
+            note.setTitle(dto.getTitle());
+            note.setCreatedAt(dto.getCreatedAt());
+            note.setChangedAt(dto.getChangedAt());
 
             if (dto.getOpenGraphData() != null) {
                 List<OpenGraphData> openGraphDataList = dto.getOpenGraphData().entrySet().stream()
@@ -110,6 +113,9 @@ public class NoteConverter extends AbstractConverter {
             newNoteDTO.setWidth(note.getWidth());
             newNoteDTO.setHeight(note.getHeight());
             newNoteDTO.setUrls(new ArrayList<String>());
+            newNoteDTO.setTitle(note.getTitle());
+            newNoteDTO.setCreatedAt(note.getCreatedAt());
+            newNoteDTO.setChangedAt(note.getChangedAt());
 
             if (note.getOpenGraphData() != null) {
                 Map<String, OpenGraphData> openGraphDataMap = note.getOpenGraphData().stream()

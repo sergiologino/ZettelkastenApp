@@ -5,6 +5,7 @@ import lombok.Setter;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -17,6 +18,10 @@ public class NoteAudioDTO implements Serializable {
     private String name;
     private String url;
 
+
+
+    private LocalDateTime createdAt;
+
     @Setter
     @Getter
     private String type;
@@ -25,6 +30,10 @@ public class NoteAudioDTO implements Serializable {
     public String getAudioName() {
         return name;
     }
+
+    public LocalDateTime getCreatedAt() {return createdAt;}
+
+    public void setCreatedAt(LocalDateTime createdAt) {this.createdAt = createdAt;}
 
     public void setAudioName(String name) {
         this.name = name;

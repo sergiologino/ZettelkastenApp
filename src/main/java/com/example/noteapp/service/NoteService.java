@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.jsoup.Jsoup;
@@ -613,12 +614,15 @@ public class NoteService {
                 newNoteFile.setFilePath(uploadPath + uniqueFileName);
                 newNoteFile.setUrl(publicPath + uniqueFileName);
                 newNoteFile.setNote(note);
+                newNoteFile.setCreatedAt(LocalDateTime.now());
 
                 if (note.getFiles() == null) {
                     note.setFiles(new ArrayList<>());
                 }
 
                 note.getFiles().add(newNoteFile);
+
+                note.setChangedAt(LocalDateTime.now());
 
                 noteRepository.save(note);
 
@@ -672,11 +676,14 @@ public class NoteService {
                 newNoteAudioFile.setAudioFileName(uniqueFileName);
                 newNoteAudioFile.setAudioFilePath(publicPath + uniqueFileName);
                 newNoteAudioFile.setNote(note);
+                newNoteAudioFile.setCreatedAt(LocalDateTime.now());
 
                 if (note.getAudios() == null) {
                     note.setAudios(new ArrayList<>());
                 }
                 note.getAudios().add(newNoteAudioFile);
+
+                note.setChangedAt(LocalDateTime.now());
 
                 noteRepository.save(note);
 

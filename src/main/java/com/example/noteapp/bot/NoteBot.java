@@ -1,5 +1,6 @@
 package com.example.noteapp.bot;
 
+import com.example.noteapp.model.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -13,7 +14,9 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -223,6 +226,10 @@ public class NoteBot extends TelegramLongPollingBot {
             Map<String, Object> requestBody = new HashMap<>();
             if (content != null) requestBody.put("content", content);
             if (fileUrl != null) requestBody.put("url", fileUrl);
+            List<String> tags = new ArrayList<>();
+            tags.add("telegram");
+            requestBody.put("tags", tags);
+
 
             ResponseEntity<String> response = restTemplate.postForEntity(
                     "http://localhost:8080/api/notes/5c4a3ca8-d911-4ee4-94d6-3386239f8c04", requestBody, String.class
@@ -241,6 +248,7 @@ public class NoteBot extends TelegramLongPollingBot {
             if (content != null) requestBody.put("content", content);
             if (url != null) requestBody.put("url", url);
             if (photoUrl != null) requestBody.put("photoUrl", photoUrl);
+            requestBody.put("fromTelegram", true);
 
             ResponseEntity<String> response = restTemplate.postForEntity(
                     "http://localhost:8080/api/notes/mixed", requestBody, String.class
@@ -251,35 +259,6 @@ public class NoteBot extends TelegramLongPollingBot {
             return "Ошибка при отправке смешанного сообщения: " + e.getMessage();
         }
     }
-
-
-//    private String sendNoteToBackend(String content, String fileUrl, String fileName) {
-//        try {
-//            RestTemplate restTemplate = new RestTemplate();
-//
-//            // Создаем тело запроса
-//            MultiValueMap<String, Object> requestBody = new LinkedMultiValueMap<>();
-//            if (content != null) {
-//                requestBody.add("content", content);
-//            }
-//            if (fileUrl != null) {
-//                requestBody.add("fileUrl", fileUrl);
-//                requestBody.add("fileName", fileName);
-//            }
-//
-//            // Отправляем данные на сервер
-//            ResponseEntity<Map> response = restTemplate.postForEntity("http://localhost:8080/api/notes", requestBody, Map.class);
-//
-//            // Обработка ответа
-//            Map<String, Object> responseBody = response.getBody();
-//            return "Заметка добавлена!\nСсылка: " + responseBody.get("noteUrl") +
-//                    "\nРезультат анализа: " + responseBody.get("analysis") +
-//                    "\nТеги: " + responseBody.get("tags");
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            return "Ошибка при добавлении заметки: " + e.getMessage();
-//        }
-//    }
 
 
     private void sendResponse(String chatId, String response) {

@@ -3,6 +3,7 @@ package com.example.noteapp.dto;
 import lombok.*;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public class NoteFileDTO implements Serializable {
@@ -14,7 +15,10 @@ public class NoteFileDTO implements Serializable {
     private String filePath;
 
 
-    String name;
+    private String name;
+
+
+    private LocalDateTime createdAt;
 
 
 
@@ -29,6 +33,10 @@ public class NoteFileDTO implements Serializable {
     public NoteFileDTO() {
     }
 
+    public LocalDateTime getCreatedAt() {return createdAt;}
+
+    public void setCreatedAt(LocalDateTime createdAt) {this.createdAt = createdAt;}
+
     public String getName() {
         return name;
     }
@@ -36,7 +44,6 @@ public class NoteFileDTO implements Serializable {
     public void setName(String name) {
         this.name = name;
     }
-
 
     public void setFileName(String name) {
             this.name = name;

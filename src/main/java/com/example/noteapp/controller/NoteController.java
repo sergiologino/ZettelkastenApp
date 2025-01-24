@@ -6,8 +6,10 @@ import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.Note;
 import com.example.noteapp.model.OpenGraphData;
 import com.example.noteapp.model.Project;
+import com.example.noteapp.model.Tag;
 import com.example.noteapp.service.NoteService;
 import com.example.noteapp.service.ProjectService;
+import com.example.noteapp.service.TagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -17,6 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,14 +44,14 @@ public class NoteController {
     private final NoteService noteService;
     private final ProjectService projectService;
     private final NoteConverter noteConverter;
+    private final TagService tagService;
 
 
-
-    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter) {
+    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter, TagService tagService) {
         this.noteService = noteService;
         this.projectService = projectService;
         this.noteConverter = noteConverter;
-
+        this.tagService = tagService;
     }
 
     @Operation(summary = "Переместить заметку в другой проект", description = "Перемещает заметку между проектами.")
@@ -110,6 +113,7 @@ public class NoteController {
        noteDTO.setNeuralNetwork("YandexGPT-Lite");
        noteDTO.setAnalyze(true);
        List<String> newUrls = new ArrayList<>();
+       noteDTO.setChangedAt(LocalDateTime.now());
 
         if (noteDTO.getUrls()!=null && !noteDTO.getUrls().isEmpty()) {
             for (String url : noteDTO.getUrls()) {
@@ -150,6 +154,8 @@ public class NoteController {
     public ResponseEntity<?> createNote(@PathVariable UUID projectId, @RequestBody NoteDTO noteDto) {
 
         noteDto.setProjectId(projectId);
+        noteDto.setCreatedAt(LocalDateTime.now());
+        noteDto.setChangedAt(LocalDateTime.now());
         try {            // Проверяем, что поле content не пустое
             if (noteDto.getContent() == null || noteDto.getContent().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("Текст заметки не может быть пустым.");
@@ -160,6 +166,7 @@ public class NoteController {
             //--------------------- ЗАГЛУШКИ ---------------------------
             noteDto.setNeuralNetwork("YandexGPT-Lite");
             noteDto.setAnalyze(true);
+
 
 
             Note savedNote = noteService.createNote(noteConverter.toEntity(noteDto), noteDto.getUrls());
@@ -202,6 +209,7 @@ public class NoteController {
             String content = (String) requestBody.get("content");
             String url = (String) requestBody.get("url");
             String photoUrl = (String) requestBody.get("photoUrl");
+            Boolean fromTelegram =(Boolean) requestBody.get("fromTelegram");
 
             Note note = new Note();
             note.setContent(content);
@@ -233,6 +241,14 @@ public class NoteController {
                 note.setFilePath(photoPath);
                 note.setFileType("image");
             }
+            note.setCreatedAt(LocalDateTime.now());
+            note.setChangedAt(LocalDateTime.now());
+            // Добавляем тег "telegram"
+            if (note.getTags() == null) {
+                note.setTags(new ArrayList<>());
+            }
+            Tag newTag=tagService.findOrCreateTag("telegram",true);
+            note.getTags().add(newTag);
 
             Note savedNote = noteService.saveNote(note);
             return ResponseEntity.ok("Заметка успешно создана с текстом, ссылкой и/или изображением.");
