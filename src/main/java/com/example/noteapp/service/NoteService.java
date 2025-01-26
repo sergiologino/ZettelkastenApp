@@ -8,6 +8,8 @@ import com.example.noteapp.repository.OpenGraphDataRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -29,6 +31,11 @@ import org.jsoup.nodes.Document;
 
 @Service
 public class NoteService {
+
+    public UUID getCurrentUserId() {
+        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return UUID.fromString(userDetails.getUsername()); // Предполагаем, что username - это user_id
+    }
 
 //    private final NoteConverter noteConverter;
     @Value("${file.storage-path}")

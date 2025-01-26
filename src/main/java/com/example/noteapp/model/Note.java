@@ -94,12 +94,25 @@ public class Note {
     @JsonManagedReference // Указывает, что это основная связь
     private List<NoteAudio> audios = new ArrayList<>();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+
 
     // constructors
     public Note() {
     }
 
     //Setters and Getters
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 
     public String getTitle() {return title;}
 

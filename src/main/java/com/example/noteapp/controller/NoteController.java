@@ -1,12 +1,11 @@
 package com.example.noteapp.controller;
 
+import com.example.noteapp.config.JwtTokenUtil;
 import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.dto.OpenGraphRequest;
 import com.example.noteapp.mapper.NoteConverter;
-import com.example.noteapp.model.Note;
-import com.example.noteapp.model.OpenGraphData;
-import com.example.noteapp.model.Project;
-import com.example.noteapp.model.Tag;
+import com.example.noteapp.model.*;
+import com.example.noteapp.repository.UserRepository;
 import com.example.noteapp.service.NoteService;
 import com.example.noteapp.service.ProjectService;
 import com.example.noteapp.service.TagService;
@@ -45,13 +44,17 @@ public class NoteController {
     private final ProjectService projectService;
     private final NoteConverter noteConverter;
     private final TagService tagService;
+    private final UserRepository userRepository;
+    private final JwtTokenUtil jwtTokenUtil;
 
 
-    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter, TagService tagService) {
+    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter, TagService tagService, UserRepository userRepository, JwtTokenUtil jwtTokenUtil) {
         this.noteService = noteService;
         this.projectService = projectService;
         this.noteConverter = noteConverter;
         this.tagService = tagService;
+        this.userRepository = userRepository;
+        this.jwtTokenUtil = jwtTokenUtil;
     }
 
     @Operation(summary = "Переместить заметку в другой проект", description = "Перемещает заметку между проектами.")
@@ -160,8 +163,7 @@ public class NoteController {
             if (noteDto.getContent() == null || noteDto.getContent().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("Текст заметки не может быть пустым.");
             }
-            // Проверяем, что проект указан
-            // ЕСЛИ НЕТ  - ТО СТАВИМ ДЕФОЛТНЫЙ
+
 
             //--------------------- ЗАГЛУШКИ ---------------------------
             noteDto.setNeuralNetwork("YandexGPT-Lite");
@@ -509,6 +511,18 @@ public class NoteController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+    // перенес в отдельный контроллер UserController
+//    @GetMapping("/users/me")
+//    public ResponseEntity<User> getCurrentUser(@RequestHeader("Authorization") String token) {
+//        String username = jwtTokenUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+//        User user = userRepository.findByUsername(username);
+//        if (user != null) {
+//            return ResponseEntity.ok(user);
+//        } else {
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+//        }
+//    }
 
 }
 

@@ -33,6 +33,9 @@ dependencies {
     implementation("javax.servlet:javax.servlet-api:4.0.1")
     // https://mvnrepository.com/artifact/org.jsoup/jsoup
     implementation("org.jsoup:jsoup:1.17.2")
+    implementation ("io.jsonwebtoken:jjwt-api:0.11.5")
+    runtimeOnly ("io.jsonwebtoken:jjwt-impl:0.11.5")
+    runtimeOnly ("io.jsonwebtoken:jjwt-jackson:0.11.5")
 
     compileOnly("org.projectlombok:lombok")
     runtimeOnly("org.postgresql:postgresql")

@@ -55,6 +55,11 @@ logging:
     console: INFO
   level:
     org:
+      springframework:
+        web: DEBUG
+        security: DEBUG
+      apache:
+        tomcat: DEBUG
       hibernate:
         SQL: DEBUG
         type:
@@ -69,4 +74,10 @@ audio:
   storage-directory: E:/uploaded
 open-graph-data:
   enabled: true
+
+jwt:
+  secret: e0ccMN3fqRE30HcE6Me2xnGF88e1xVrGwNndNzTd
+  expiration:
+    access: 3600000  # 1 ???
+    refresh: 86400000  # 1 ????
 
