@@ -77,7 +77,7 @@ open-graph-data:
 
 jwt:
   secret: e0ccMN3fqRE30HcE6Me2xnGF88e1xVrGwNndNzTd
-  expiration:
-    access: 3600000  # 1 ???
-    refresh: 86400000  # 1 ????
+  expiration: 86400000
+#    access: 3600000  # 1 ???
+#    refresh: 86400000  # 1 ????
 
