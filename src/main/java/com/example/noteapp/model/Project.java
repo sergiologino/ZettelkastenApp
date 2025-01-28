@@ -27,8 +27,24 @@ public class Project {
     @Column(length = 10, nullable = true)
     private String color;
 
+    @Column(nullable = true)
+    private int position;
+
     @Column(name="created_at")
     private LocalDateTime createdAt;
+
+
+
+    @Column(name="updated_at")
+    private LocalDateTime updatedAt;
+
+
+
+    @Column(name="user_id", nullable = false)
+    private UUID userId;
+
+    @Column(name="is_default", nullable = true)
+    private boolean isDefault;
 
 
 
@@ -37,6 +53,46 @@ public class Project {
     private List<Note> notes;
 
     public Project() {
+    }
+
+    public boolean isDefault() {
+        return isDefault;
+    }
+
+    public void setDefault(boolean aDefault) {
+        isDefault = aDefault;
+    }
+
+    public int getPosition() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public UUID getId() {

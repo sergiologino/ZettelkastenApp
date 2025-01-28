@@ -5,6 +5,8 @@ import com.example.noteapp.integration.IntegrationService;
 import com.example.noteapp.model.*;
 import com.example.noteapp.repository.NoteRepository;
 import com.example.noteapp.repository.OpenGraphDataRepository;
+import com.example.noteapp.repository.UserRepository;
+import com.example.noteapp.utils.SecurityUtils;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,10 +34,8 @@ import org.jsoup.nodes.Document;
 @Service
 public class NoteService {
 
-    public UUID getCurrentUserId() {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return UUID.fromString(userDetails.getUsername()); // Предполагаем, что username - это user_id
-    }
+
+
 
 //    private final NoteConverter noteConverter;
     @Value("${file.storage-path}")
@@ -58,9 +58,10 @@ public class NoteService {
     private final OpenGraphDataRepository openGraphDataRepository;
     private final String filePath = "${file.storage-path}";
     private final String audioFilePath = "${audio.storage-path}";
+    private final UserRepository userRepository;
 
 
-    public NoteService(NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, OpenGraphDataRepository openGraphDataRepository) {
+    public NoteService(NoteRepository noteRepository, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, OpenGraphDataRepository openGraphDataRepository, UserRepository userRepository) {
 
         this.noteRepository = noteRepository;
         this.tagService = tagService;
@@ -70,10 +71,16 @@ public class NoteService {
        // this.noteConverter = noteConverter;
         this.openGraphDataRepository = openGraphDataRepository;
 //        this.noteConverter = noteConverter;
+        this.userRepository = userRepository;
+    }
+
+    public UUID getCurrentUserId() {
+        return SecurityUtils.getCurrentUserId();
     }
 
     public List<Note> getAllNotes() {
-        return noteRepository.findAll();
+        UUID userId = getCurrentUserId();
+        return noteRepository.findAllbyUserId(SecurityUtils.getCurrentUserId());
     }
 
     public Note getNoteById(UUID id, HttpServletRequest request) {

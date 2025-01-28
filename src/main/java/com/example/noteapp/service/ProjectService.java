@@ -3,6 +3,7 @@ package com.example.noteapp.service;
 import com.example.noteapp.dto.ProjectDTO;
 import com.example.noteapp.model.Project;
 import com.example.noteapp.repository.ProjectRepository;
+import com.example.noteapp.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,16 +20,20 @@ public class ProjectService {
         this.projectRepository = projectRepository;
     }
 
+    public UUID getCurrentUserId() {
+        return SecurityUtils.getCurrentUserId();
+    }
+
     public List<Project> getAllProjects() {
-        return projectRepository.findAll();
+        return projectRepository.findAllByUserId(getCurrentUserId());
     }
 
     public Project getProjectById(UUID id) {
-        return projectRepository.findById(id).orElseThrow(() -> new RuntimeException("Project not found"));
+        return projectRepository.findByIdAndUserId(id, getCurrentUserId()).orElseThrow(() -> new RuntimeException("Project not found"));
     }
     @Transactional
     public Project saveProject(Project project) {
-        return projectRepository.save(project);
+        return projectRepository.saveProjectWithUserId(project,getCurrentUserId());
     }
 
     public void deleteProjectById(UUID id) {

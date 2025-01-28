@@ -18,6 +18,8 @@ public class ProjectDTO {
     private String description;
     private String color;
     private LocalDateTime createdAt;
+    private boolean isDefault;
+    private int position;
 
     private List<NoteDTO> notes;
 

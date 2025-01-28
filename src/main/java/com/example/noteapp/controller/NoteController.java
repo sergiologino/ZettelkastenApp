@@ -1,6 +1,5 @@
 package com.example.noteapp.controller;
 
-import com.example.noteapp.config.JwtTokenUtil;
 import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.dto.OpenGraphRequest;
 import com.example.noteapp.mapper.NoteConverter;
@@ -45,16 +44,16 @@ public class NoteController {
     private final NoteConverter noteConverter;
     private final TagService tagService;
     private final UserRepository userRepository;
-    private final JwtTokenUtil jwtTokenUtil;
+//    private final JwtTokenUtil jwtTokenUtil;
 
 
-    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter, TagService tagService, UserRepository userRepository, JwtTokenUtil jwtTokenUtil) {
+    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter, TagService tagService, UserRepository userRepository) {
         this.noteService = noteService;
         this.projectService = projectService;
         this.noteConverter = noteConverter;
         this.tagService = tagService;
         this.userRepository = userRepository;
-        this.jwtTokenUtil = jwtTokenUtil;
+//        this.jwtTokenUtil = jwtTokenUtil;
     }
 
     @Operation(summary = "Переместить заметку в другой проект", description = "Перемещает заметку между проектами.")
@@ -273,36 +272,6 @@ public class NoteController {
         return noteService.analyzeAndAssignTags(noteId, chatId);
     }
 
-
-
-//    @Operation(summary = "Добавить файл к заметке", description = "Позволяет прикрепить файл к существующей заметке.")
-//    @ApiResponses(value = {
-//            @ApiResponse(responseCode = "200", description = "Файл успешно добавлен"),
-//            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
-//            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
-//    })
-//    @PutMapping("/{noteId}/upload")
-//    public Note uploadFileToNote(
-//            @PathVariable UUID noteId,
-//            @RequestParam("file") MultipartFile file,
-//            @RequestParam(required = false) String neuralNetwork
-//    ) {
-//        return noteService.addFileToNote(noteId, file, neuralNetwork);
-//    }
-//
-//    @Operation(summary = "Загрузить звуковой файл к заметке", description = "Позволяет прикрепить звуковой файл к заметке.")
-//    @ApiResponses(value = {
-//            @ApiResponse(responseCode = "200", description = "Файл успешно добавлен"),
-//            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
-//            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
-//    })
-//    @PutMapping("/{noteId}/uploadAudio")
-//    public Note uploadAudioToNote(
-//            @PathVariable UUID noteId,
-//            @RequestParam("file") MultipartFile file
-//    ) {
-//        return noteService.addAudioToNote(noteId, file);
-//    }
 
 
     @Operation(summary = "Получить заметку по ID", description = "Возвращает заметку с указанным идентификатором.")
