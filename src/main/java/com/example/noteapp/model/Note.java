@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Entity
@@ -110,7 +111,7 @@ public class Note {
         return user;
     }
 
-    public void setUser(User user) {
+    public void setUser(Optional<User> user) {
         this.user = user;
     }
 

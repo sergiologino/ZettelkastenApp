@@ -1,5 +1,6 @@
 package com.example.noteapp.mapper;
 
+import com.example.noteapp.controller.UserController;
 import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.model.Note;
 import com.example.noteapp.model.NoteAudio;
@@ -8,6 +9,7 @@ import com.example.noteapp.model.OpenGraphData;
 import com.example.noteapp.service.NoteService;
 import com.example.noteapp.service.ProjectService;
 import com.example.noteapp.service.TagService;
+import com.example.noteapp.utils.SecurityUtils;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -22,15 +24,17 @@ public class NoteConverter extends AbstractConverter {
     private final NoteService noteService;
     private final NoteFileConverter noteFileConverter;
     private final NoteAudioConverter noteAudioConverter;
+    private final UserController userController;
 
 
-    public NoteConverter(ProjectService projectService, TagService tagService, NoteService noteService, NoteFileConverter noteFileConverter, NoteAudioConverter noteAudioConverter) {
+    public NoteConverter(ProjectService projectService, TagService tagService, NoteService noteService, NoteFileConverter noteFileConverter, NoteAudioConverter noteAudioConverter, UserController userController) {
         super();
         this.projectService = projectService;
         this.tagService = tagService;
         this.noteService = noteService;
         this.noteFileConverter = noteFileConverter;
         this.noteAudioConverter = noteAudioConverter;
+        this.userController = userController;
     }
 
     @Override
@@ -58,6 +62,7 @@ public class NoteConverter extends AbstractConverter {
             note.setTitle(dto.getTitle());
             note.setCreatedAt(dto.getCreatedAt());
             note.setChangedAt(dto.getChangedAt());
+            note.setUser(userController.getUserByUserId(dto.getUserId()));
 
             if (dto.getOpenGraphData() != null) {
                 List<OpenGraphData> openGraphDataList = dto.getOpenGraphData().entrySet().stream()
@@ -77,12 +82,12 @@ public class NoteConverter extends AbstractConverter {
 
 
 //TODO снять комментарий после преобразования audios и files в массив на фронте
-//            note.setFiles(dto.getFiles().stream()
-//                    .map(noteFileConverter::toEntity)
-//                    .collect(Collectors.toList()));
-//            note.setAudios(dto.getAudios().stream()
-//                    .map(noteAudioConverter::toEntity)
-//                    .collect(Collectors.toList()));
+            note.setFiles(dto.getFiles().stream()
+                    .map(noteFileConverter::toEntity)
+                    .collect(Collectors.toList()));
+            note.setAudios(dto.getAudios().stream()
+                    .map(noteAudioConverter::toEntity)
+                    .collect(Collectors.toList()));
 
 
 
@@ -116,6 +121,7 @@ public class NoteConverter extends AbstractConverter {
             newNoteDTO.setTitle(note.getTitle());
             newNoteDTO.setCreatedAt(note.getCreatedAt());
             newNoteDTO.setChangedAt(note.getChangedAt());
+            newNoteDTO.setUserId(note.getUser().getId());
 
             if (note.getOpenGraphData() != null) {
                 Map<String, OpenGraphData> openGraphDataMap = note.getOpenGraphData().stream()

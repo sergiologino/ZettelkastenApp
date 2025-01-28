@@ -59,6 +59,8 @@ public class NoteDTO {
 
     private List<NoteAudioDTO> audios;
 
+    private UUID userId;
+
    private Map<String, OpenGraphData> openGraphData; // Данные Open Graph
 
     public NoteDTO() {}
@@ -90,6 +92,14 @@ public class NoteDTO {
         this.audios = null;
         this.openGraphData = null;
 
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
     }
 
     public String getTitle() {return title;    }

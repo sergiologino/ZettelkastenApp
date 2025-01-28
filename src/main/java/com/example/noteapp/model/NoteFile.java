@@ -34,15 +34,35 @@ public class NoteFile {
     @JsonBackReference // Указывает, что это обратная ссылка
     private Note note;
 
+    @Column(name = "user_id", nullable = true)
+    private UUID userId;
+
     public NoteFile() {
     }
 
-    public NoteFile(UUID id, String filePath, String fileName, Note note, String fileUrl) {
+    public NoteFile(UUID id, String filePath, String fileName, Note note, String fileUrl, UUID userId) {
         this.id = id;
         this.serverFilePath = filePath;
         this.originalName = fileName;
         this.note = note;
         this.fileUrl = fileUrl;
+        this.userId = userId;
+    }
+
+    public String getFileUrl() {
+        return fileUrl;
+    }
+
+    public void setFileUrl(String fileUrl) {
+        this.fileUrl = fileUrl;
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
     }
 
     public LocalDateTime getCreatedAt() {return createdAt;}

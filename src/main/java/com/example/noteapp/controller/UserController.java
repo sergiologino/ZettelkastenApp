@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -47,5 +48,9 @@ public class UserController {
 
     public List<Project> getNotesForCurrentUser(UUID userId) {
         return projectRepository.findAllByUserId(userId);
+    }
+
+    public Optional<User> getUserByUserId(UUID userId) {
+        return userRepository.findById(userId);
     }
 }

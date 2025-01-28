@@ -33,7 +33,9 @@ public class ProjectService {
     }
     @Transactional
     public Project saveProject(Project project) {
-        return projectRepository.saveProjectWithUserId(project,getCurrentUserId());
+        UUID userId = SecurityUtils.getCurrentUserId();
+        project.setUserId(userId);
+        return projectRepository.save(project);
     }
 
     public void deleteProjectById(UUID id) {
