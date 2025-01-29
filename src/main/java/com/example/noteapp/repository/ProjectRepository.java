@@ -22,4 +22,7 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
     // Удаление проекта по ID и userId
     @Query("DELETE FROM Project p WHERE p.id = :projectId AND p.userId = :userId")
     void deleteByIdAndUserId(@Param("projectId") UUID projectId, @Param("userId") UUID userId);
+
+    @Query("SELECT p FROM Project p WHERE p.userId = :userId AND p.isDefault = true")
+    Optional<Project> findDefaultProjectByUserId(@Param("userId") UUID userId);
 }

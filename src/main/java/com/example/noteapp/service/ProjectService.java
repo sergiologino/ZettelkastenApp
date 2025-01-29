@@ -4,6 +4,7 @@ import com.example.noteapp.dto.ProjectDTO;
 import com.example.noteapp.model.Project;
 import com.example.noteapp.repository.ProjectRepository;
 import com.example.noteapp.utils.SecurityUtils;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,12 +26,23 @@ public class ProjectService {
     }
 
     public List<Project> getAllProjects() {
-        return projectRepository.findAllByUserId(getCurrentUserId());
+        UUID userId = getCurrentUserId();
+        return projectRepository.findAllByUserId(userId);
     }
 
+    // Получение проекта по ID
     public Project getProjectById(UUID id) {
-        return projectRepository.findByIdAndUserId(id, getCurrentUserId()).orElseThrow(() -> new RuntimeException("Project not found"));
+        UUID userId = getCurrentUserId();
+        return projectRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Project not found or access denied."));
     }
+
+    public Project getDefaultProjectForUser(UUID userId) {
+
+        return projectRepository.findDefaultProjectByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Default project not found for user."));
+    }
+
     @Transactional
     public Project saveProject(Project project) {
         UUID userId = SecurityUtils.getCurrentUserId();
@@ -38,17 +50,21 @@ public class ProjectService {
         return projectRepository.save(project);
     }
 
+    // Удаление проекта по ID
+    @Transactional
     public void deleteProjectById(UUID id) {
-        projectRepository.deleteById(id);
+        UUID userId = getCurrentUserId();
+        projectRepository.deleteByIdAndUserId(id, userId);
     }
 
+    // Преобразование объекта Project в DTO
     public ProjectDTO convertToDto(Project project) {
         ProjectDTO dto = new ProjectDTO();
         dto.setId(project.getId());
         dto.setName(project.getName());
         dto.setDescription(project.getDescription());
         dto.setColor(project.getColor());
-        // Удаляем связанные заметки для простого ответа
+        // Убираем связанные заметки для облегчения ответа
         dto.setNotes(Collections.emptyList());
         return dto;
     }

@@ -111,7 +111,7 @@ public class Note {
         return user;
     }
 
-    public void setUser(Optional<User> user) {
+    public void setUser(User user) {
         this.user = user;
     }
 

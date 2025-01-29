@@ -2,6 +2,7 @@ package com.example.noteapp.config;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,6 +16,12 @@ import java.util.function.Function;
 @Component
 public class JwtTokenProvider {
 
+    @Value("${jwt.expiration.access}")
+    private long accessTokenExpiration;
+
+    @Value("${jwt.expiration.refresh}")
+    private long refreshTokenExpiration;
+
     private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     private final long validityInMilliseconds = 3600000; // 1 час
     private final UserDetailsService userDetailsService;
@@ -23,14 +30,23 @@ public class JwtTokenProvider {
         this.userDetailsService = userDetailsService;
     }
 
+    public String generateAccessToken(String username) {
+
+        return generateToken(username, accessTokenExpiration);
+    }
+
+    public String generateRefreshToken(String username) {
+
+        return generateToken(username, refreshTokenExpiration);
+    }
+
     // Генерация токена
-    public String generateToken(Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+    public String generateToken(String username, long expiration) {
         return Jwts.builder()
-                .setSubject(userDetails.getUsername())
+                .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + validityInMilliseconds))
-                .signWith(key)
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 

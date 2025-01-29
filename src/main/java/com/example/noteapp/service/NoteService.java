@@ -110,7 +110,8 @@ public class NoteService {
     // Сохранить новую заметку
     public Note saveNote(Note note) {
         UUID userId = getCurrentUserId();
-        note.setUser(userRepository.findById(userId));
+        User user =userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
+        note.setUser(user);
         return noteRepository.save(note);
     }
 
@@ -296,17 +297,22 @@ public class NoteService {
     }
 
 
+
+
     @Transactional
     public Note createNote(Note note, List<String> links){
 
         UUID userId = getCurrentUserId();
 //
-        if (note.getProject() == null || note.getProject().getId() == null) {
-            note.setProject(projectService.getProjectById(UUID.fromString("3637ff4b-98bc-402b-af00-97bf35f84be3")));
-            note.setContent(note.getContent()+" проект добавлен костылем в createNote");
-            note.setUser(userRepository.findById(userId));
-            //throw new IllegalArgumentException("Проект обязателен для создания заметки.");
+        if (note.getProject() == null) {
+            // Назначаем проект по умолчанию, если не указан
+            Project defaultProject = projectService.getDefaultProjectForUser(userId);
+            note.setProject(defaultProject);
         }
+            note.setContent("Проект по умолчанию " + System.lineSeparator() + note.getContent());
+            User user=userRepository.findById(userId).orElseThrow();
+            note.setUser(user);
+
         noteRepository.save(note);
         // Обрабатываем ссылки и сохраняем Open Graph данные
         boolean useOpenGraph = openGraphDataEnabled;

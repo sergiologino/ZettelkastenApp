@@ -5,12 +5,11 @@ import com.example.noteapp.model.Project;
 import com.example.noteapp.model.User;
 import com.example.noteapp.repository.ProjectRepository;
 import com.example.noteapp.repository.UserRepository;
-import org.springframework.http.HttpStatus;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -39,9 +38,13 @@ public class UserController {
 
     @PostMapping("/sync")
     public ResponseEntity<String> syncUser(@RequestBody User user) {
-        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
+        // Проверяем, существует ли пользователь с указанным именем
+        User existingUser = userRepository.findByUsername(user.getUsername());
+        if (existingUser != null) {
             return ResponseEntity.badRequest().body("Пользователь уже существует.");
         }
+
+        // Сохраняем нового пользователя
         userRepository.save(user);
         return ResponseEntity.ok("Пользователь успешно синхронизирован.");
     }
@@ -50,7 +53,8 @@ public class UserController {
         return projectRepository.findAllByUserId(userId);
     }
 
-    public Optional<User> getUserByUserId(UUID userId) {
-        return userRepository.findById(userId);
+    public User getUserByUserId(UUID userId) {
+        User existingUser = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("Пользователь с ID " + userId + " не найден."));
+        return existingUser;
     }
 }
