@@ -1,8 +1,12 @@
 package com.example.noteapp.controller;
 
 import com.example.noteapp.config.JwtTokenProvider;
+import com.example.noteapp.dto.UserRegistrationDTO;
+import com.example.noteapp.model.Project;
 import com.example.noteapp.model.User;
+import com.example.noteapp.repository.ProjectRepository;
 import com.example.noteapp.repository.UserRepository;
+import com.example.noteapp.service.ProjectService;
 import com.example.noteapp.service.UserService;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Base64;
@@ -27,7 +32,6 @@ import org.springframework.web.client.RestTemplate;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:3000")
 @Tag(name = "Auth API", description = "API для регистрации и авторизации")
 public class AuthController {
 
@@ -36,13 +40,15 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final Map<String, String> stateStore = new HashMap<>();
     private final PasswordEncoder passwordEncoder;
+    private final ProjectService projectService;
 
 
-    public AuthController(UserService userService, UserRepository userRepository, JwtTokenProvider jwtTokenProvider, PasswordEncoder passwordEncoder) {
+    public AuthController(UserService userService, UserRepository userRepository, JwtTokenProvider jwtTokenProvider, PasswordEncoder passwordEncoder, ProjectService projectService) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
+        this.projectService = projectService;
     }
 
 
@@ -154,10 +160,19 @@ public class AuthController {
                     )
             }
     )
-    public ResponseEntity<String> register(@RequestBody User user) {
-        userService.registerUser(user);
+    public ResponseEntity<String> register(@RequestBody UserRegistrationDTO userDTO) {
 
+
+        if (userRepository.findByUsername(userDTO.getUsername()) != null) {
+            return ResponseEntity.badRequest().body("Пользователь уже существует.");
+        }
+        User user = new User();
+        user.setUsername(userDTO.getUsername());
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        user.setEmail(userDTO.getEmail());
+        System.out.println("Регистрируем пользователя: " + user.getUsername());
         ResponseEntity<String> response = syncUser(user);
+        System.out.println("Ответ syncUser: " + response.getStatusCode());
 
         if (!response.getStatusCode().is2xxSuccessful()) {
             return ResponseEntity.status(response.getStatusCode()).body("Ошибка при синхронизации с приложением.");
@@ -169,10 +184,23 @@ public class AuthController {
     public ResponseEntity<String> syncUser(@RequestBody User user) {
         User existingUser = userRepository.findByUsername(user.getUsername());
             if (existingUser != null) {
+                System.out.println("Ошибка регистрации: пользователь уже существует");
                 return ResponseEntity.badRequest().body("Пользователь уже существует.");
             }
 
         userRepository.save(user);
+        // Создаем проект "Главное"
+        Project defaultProject = new Project();
+        defaultProject.setName("Главное");
+        defaultProject.setDescription("Проект по умолчанию");
+        defaultProject.setColor("#D3D3D3"); // Светло-серый цвет
+        defaultProject.setPosition(1);
+        defaultProject.setDefault(true);
+        defaultProject.setUserId(user.getId());
+        defaultProject.setCreatedAt(LocalDateTime.now());
+
+        projectService.saveProject(defaultProject); // Сохраняем проект в базу
+
         return ResponseEntity.ok("Пользователь успешно синхронизирован.");
     }
 

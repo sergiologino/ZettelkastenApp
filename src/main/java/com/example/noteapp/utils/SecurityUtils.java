@@ -14,9 +14,14 @@ public class SecurityUtils {
         SecurityUtils.userRepository = userRepository;
     }
 
-    public static UUID getCurrentUserId() {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    public static String getCurrentUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        return userRepository.findByUsername(userDetails.getUsername()).getId();
+        if (principal instanceof UserDetails) {
+            return ((UserDetails) principal).getUsername(); // Вернем имя пользователя
+        } else if (principal instanceof String) {
+            return (String) principal; // Вернем строку, если principal — это имя пользователя
+        }
+        throw new IllegalStateException("Не удалось определить пользователя");
     }
 }

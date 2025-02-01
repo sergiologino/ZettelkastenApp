@@ -24,24 +24,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+
+        String requestURI = request.getRequestURI();
+
+        System.out.println("Запрос: " + requestURI);
+        // Разрешить запросы без токена для регистрации и логина
+        if (requestURI.startsWith("/api/auth/register") || requestURI.startsWith("/api/auth/login") || requestURI.startsWith("/auth/login") || requestURI.startsWith("/auth/register")) {
+            chain.doFilter(request, response);
+            return;
+        }
         String authHeader = request.getHeader("Authorization");
         String token = null;
         String username = null;
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);
-            username = jwtTokenProvider.getUsernameFromToken(token);
+            token = authHeader.substring(7); // 💡 Извлекаем токен из заголовка
+            username = jwtTokenProvider.getUsernameFromToken(token); // 💡 Получаем username из токена
+            System.out.println("username: " + username);
         }
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (token != null && username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = jwtTokenProvider.loadUserByUsername(username);
 
             if (jwtTokenProvider.validateToken(token, userDetails)) {
                 var authentication = jwtTokenProvider.getAuthentication(token, userDetails);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else {
+                SecurityContextHolder.getContext().setAuthentication(null);
             }
         }
-        chain.doFilter(request, response);
     }
 }
 

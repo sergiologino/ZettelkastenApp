@@ -84,7 +84,7 @@ public class Note {
     private LocalDateTime changedAt;
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
+    @JsonIgnore
     private List<OpenGraphData> openGraphData = new ArrayList<>();;
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)

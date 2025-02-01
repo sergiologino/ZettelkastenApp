@@ -3,7 +3,9 @@ package com.example.noteapp.service;
 import com.example.noteapp.dto.ProjectDTO;
 import com.example.noteapp.model.Project;
 import com.example.noteapp.repository.ProjectRepository;
+import com.example.noteapp.repository.UserRepository;
 import com.example.noteapp.utils.SecurityUtils;
+import com.nimbusds.jose.crypto.opts.UserAuthenticationRequired;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,17 +14,23 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+
+
 @Service
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final UserRepository userRepository;
 
-    public ProjectService(ProjectRepository projectRepository) {
+
+
+    public ProjectService(ProjectRepository projectRepository, UserRepository userRepository) {
         this.projectRepository = projectRepository;
+        this.userRepository = userRepository;
     }
 
     public UUID getCurrentUserId() {
-        return SecurityUtils.getCurrentUserId();
+        return userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
     }
 
     public List<Project> getAllProjects() {
@@ -45,7 +53,11 @@ public class ProjectService {
 
     @Transactional
     public Project saveProject(Project project) {
-        UUID userId = SecurityUtils.getCurrentUserId();
+        String currentUser = SecurityUtils.getCurrentUserId();
+        if (currentUser == null) {
+            throw new SecurityException("Не удалось определить текущего пользователя.");
+        }
+        UUID userId = userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
         project.setUserId(userId);
         return projectRepository.save(project);
     }
@@ -64,8 +76,11 @@ public class ProjectService {
         dto.setName(project.getName());
         dto.setDescription(project.getDescription());
         dto.setColor(project.getColor());
+        dto.setDefault(project.isDefault());
+        dto.setCreatedAt(project.getCreatedAt());
         // Убираем связанные заметки для облегчения ответа
         dto.setNotes(Collections.emptyList());
+        dto.setPosition(project.getPosition());
         return dto;
     }
 }

@@ -75,12 +75,12 @@ public class NoteService {
     }
 
     public UUID getCurrentUserId() {
-        return SecurityUtils.getCurrentUserId();
+        return userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
     }
 
     public List<Note> getAllNotes() {
         UUID userId = getCurrentUserId();
-        return noteRepository.findAllbyUserId(SecurityUtils.getCurrentUserId());
+        return noteRepository.findAllbyUserId(userId);
     }
 
     public Note getNoteById(UUID id, HttpServletRequest request) {

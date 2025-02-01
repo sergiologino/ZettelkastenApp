@@ -29,6 +29,24 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Note> notes;
 
+    @Column(name = "tlg_username", length = 32)
+    private String tlgUsername;  // Telegram username
+
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;  // Номер телефона
+
+    @Column(name = "billing", nullable = false)
+    private boolean billing;  // Признак платного тарифа
+
+    @Lob
+    @Column(name = "avatar", columnDefinition = "BYTEA")
+    private byte[] avatar;  // Аватар пользователя (хранится как BLOB)
+
+    @Column(name = "color_theme", nullable = false)
+    private boolean colorTheme;  // Темная/светлая тема
+
+    private boolean enabled = true;
+
     // Геттеры и сеттеры
     public UUID getId() {
         return id;
@@ -41,7 +59,6 @@ public class User {
     public String getUsername() {
         return username;
     }
-    private boolean enabled = true;
 
     public void setUsername(String username) {
         this.username = username;
@@ -69,5 +86,45 @@ public class User {
 
     public void setNotes(List<Note> notes) {
         this.notes = notes;
+    }
+
+    public String getTlgUsername() {
+        return tlgUsername;
+    }
+
+    public void setTlgUsername(String tlgUsername) {
+        this.tlgUsername = tlgUsername;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public boolean isBilling() {
+        return billing;
+    }
+
+    public void setBilling(boolean billing) {
+        this.billing = billing;
+    }
+
+    public byte[] getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(byte[] avatar) {
+        this.avatar = avatar;
+    }
+
+    public boolean isColorTheme() {
+        return colorTheme;
+    }
+
+    public void setColorTheme(boolean colorTheme) {
+        this.colorTheme = colorTheme;
     }
 }

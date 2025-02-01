@@ -87,6 +87,7 @@ logging:
       springframework:
         web: DEBUG
         security: DEBUG
+        hibernate: ERROR
       apache:
         tomcat: DEBUG
       hibernate:

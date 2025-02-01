@@ -2,6 +2,7 @@ package com.example.noteapp.service;
 
 import com.example.noteapp.model.Tag;
 import com.example.noteapp.repository.TagRepository;
+import com.example.noteapp.repository.UserRepository;
 import com.example.noteapp.utils.SecurityUtils;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
@@ -15,14 +16,16 @@ import java.util.UUID;
 public class TagService {
 
     private final TagRepository tagRepository;
+    private final UserRepository userRepository;
 
-    public TagService(TagRepository tagRepository) {
+    public TagService(TagRepository tagRepository, UserRepository userRepository) {
         this.tagRepository = tagRepository;
+        this.userRepository = userRepository;
     }
 
     // Получение текущего userId
     private UUID getCurrentUserId() {
-        return SecurityUtils.getCurrentUserId();
+        return userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
     }
 
     public List<Tag> getAllTags() {

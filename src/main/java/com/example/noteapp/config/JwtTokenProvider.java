@@ -2,6 +2,7 @@ package com.example.noteapp.config;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -9,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.function.Function;
@@ -22,8 +24,18 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration.refresh}")
     private long refreshTokenExpiration;
 
-    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    private final long validityInMilliseconds = 3600000; // 1 час
+    @Value("${jwt.secret}")
+    private String secretKey;
+
+    private Key key;
+
+    @PostConstruct
+    public void init() {
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+    }
+
+//    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private final long validityInMilliseconds = accessTokenExpiration;// 3600000; // 1 час
     private final UserDetailsService userDetailsService;
 
     public JwtTokenProvider(UserDetailsService userDetailsService) {
@@ -52,7 +64,14 @@ public class JwtTokenProvider {
 
     // Извлечение userId из токена
     public String getUserIdFromToken(String token) {
-        return getClaimFromToken(token, claims -> claims.get("userId", String.class));
+        try {
+            Claims claims = getAllClaimsFromToken(token);
+            System.out.println("Claims в токене: " + claims);
+            return claims.getSubject();
+        } catch (Exception e) {
+            System.out.println("Ошибка извлечения username из токена: " + e.getMessage());
+            return null;
+        }
     }
 
 
@@ -68,7 +87,16 @@ public class JwtTokenProvider {
     }
 
     private Claims getAllClaimsFromToken(String token) {
-        return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        }catch (Exception e) {
+            System.out.println("Ошибка парсинга токена: " + e.getMessage());
+            return null;
+        }
     }
 
     // Проверка валидности токена
@@ -89,6 +117,9 @@ public class JwtTokenProvider {
 
     // Получение Authentication из токена
     public Authentication getAuthentication(String token, UserDetails userDetails) {
+        if (userDetails == null) {
+            throw new IllegalArgumentException("Пользователь не найден");
+        }
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
 }
