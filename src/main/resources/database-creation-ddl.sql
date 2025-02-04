@@ -19,6 +19,7 @@ CREATE TABLE  IF NOT EXISTS public.users (
     phone_number VARCHAR(255),
     billing boolean DEFAULT FALSE,
     avatar bytea,
+    telegram_chat_id VARCHAR(255) UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -35,7 +36,7 @@ CREATE TABLE  IF NOT EXISTS public.projects (
 	color varchar(255),
 	is_default boolean DEFAULT FALSE,
 	CONSTRAINT projects_pkey PRIMARY KEY (id),
-	CONSTRAINT uk1e447b96pedrvtxw44ot4qxem UNIQUE (name),
+	CONSTRAINT uk1e447b96pedrvtxw44ot4qxem UNIQUE (user_id, name),
 	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

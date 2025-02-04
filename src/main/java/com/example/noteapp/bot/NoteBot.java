@@ -1,11 +1,10 @@
 package com.example.noteapp.bot;
 
-import com.example.noteapp.model.Tag;
+import com.example.noteapp.model.User;
+import com.example.noteapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
@@ -14,13 +13,13 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class NoteBot extends TelegramLongPollingBot {
+
+    private final UserRepository userRepository;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${telegram.bot.token}")
     private String botToken;
@@ -28,7 +27,10 @@ public class NoteBot extends TelegramLongPollingBot {
     @Value("${telegram.bot.username}")
     private String botUsername;
 
-    public NoteBot(String botToken, String botUsername) {
+
+
+    public NoteBot(UserRepository userRepository, String botToken, String botUsername) {
+        this.userRepository = userRepository;
         this.botToken = botToken;
         this.botUsername = botUsername;
     }
@@ -47,14 +49,32 @@ public class NoteBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (update.hasMessage()) {
             Message message = update.getMessage();
-
             String chatId = message.getChatId().toString();
+            String username = message.getFrom().getUserName(); // Telegram username
             String text = message.getText();
+
+            // Ищем пользователя по Telegram username
+            Optional<User> userOptional = userRepository.findByTlgUsername(username);
+
+            if (userOptional.isEmpty()) {
+                sendResponse(chatId, "Ошибка: Ваш Telegram-аккаунт не привязан к системе.");
+                return;
+            }
+
+            User user = userOptional.get();
+
+            // Если у пользователя еще нет Telegram chatId — сохраняем его
+            if (Objects.isNull(user.getTelegramChatId())) {  // ✅ Если поле chatID  у пользака не заполнено то заполняем
+               user.setTelegramChatId(chatId);
+                userRepository.save(user);
+            }
+
+
 
             // Проверяем тип сообщения
             // TODO Animation потом поменять на Text
             if (text != null && (message.hasPhoto() || text.contains("http"))) {
-                handleMixedMessage(message);
+                handleMixedMessage(message, user.getId());
             } else if (message.hasAnimation()) {
                 handleTextMessage(message);
             } else if (message.hasDocument()) {
@@ -63,6 +83,8 @@ public class NoteBot extends TelegramLongPollingBot {
                 handleVoiceMessage(message);
             } else if (message.hasText()) {
                 handleIncomingMessage(message);
+            } else if (message.hasPhoto()) {
+                handlePhotoMessage(message, user.getId());
             } else {
                 sendResponse(message.getChatId().toString(), "Неизвестный тип сообщения. Поддерживаются текст, документы и голосовые сообщения.");
             }
@@ -70,7 +92,9 @@ public class NoteBot extends TelegramLongPollingBot {
     }
 
     // Обработка смешанного сообщения
-    private void handleMixedMessage(Message message) {
+
+    //TODO USERID
+    private void handleMixedMessage(Message message, UUID userId) { // UserId
         String chatId = message.getChatId().toString();
         String text = message.getText();
         String photoUrl = null;
@@ -115,19 +139,19 @@ public class NoteBot extends TelegramLongPollingBot {
         System.out.println("photoUrl: " + photoUrl);
 
 
-        String result = sendMixedNoteToBackend(comment, link, photoUrl);
+        String result = sendMixedNoteToBackend(comment, link, photoUrl, userId); //userId
         response="Смешанное сообщение обработано: ";
 
         sendResponse(chatId, response);
     }
 
     // Обработка фото
-    private void handlePhotoMessage(Message message) {
+    private void handlePhotoMessage(Message message, UUID userId) {
         String chatId = message.getChatId().toString();
         try {
             String fileId = message.getPhoto().get(message.getPhoto().size() - 1).getFileId();
             String photoUrl = getFileUrl(fileId);
-            String response = sendMixedNoteToBackend(null, null, photoUrl);
+            String response = sendMixedNoteToBackend(null, null, photoUrl, userId);
             sendResponse(chatId, response);
         } catch (Exception e) {
             sendResponse(chatId, "Ошибка при обработке изображения: " + e.getMessage());
@@ -229,6 +253,7 @@ public class NoteBot extends TelegramLongPollingBot {
             List<String> tags = new ArrayList<>();
             tags.add("telegram");
             requestBody.put("tags", tags);
+            requestBody.put("username", botUsername);
 
 
             ResponseEntity<String> response = restTemplate.postForEntity(
@@ -240,8 +265,8 @@ public class NoteBot extends TelegramLongPollingBot {
             return "Ошибка: " + e.getMessage();
         }
     }
-
-    private String sendMixedNoteToBackend(String content, String url, String photoUrl) {
+//  TODO USERID
+    private String sendMixedNoteToBackend(String content, String url, String photoUrl, UUID userId) {
         try {
             RestTemplate restTemplate = new RestTemplate();
             Map<String, Object> requestBody = new HashMap<>();

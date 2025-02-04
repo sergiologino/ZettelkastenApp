@@ -48,11 +48,15 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html",
                                 "/api/auth/register",
-                                "/api/auth/login/**",
+                                "/api/auth/login",
+                                "/api/auth/logout",
+                                "api/auth/sync",
                                 "/api/auth/**"
+
                         ).permitAll()
+                        .requestMatchers("/api/projects/**").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // Разрешаем preflight-запросы
-                        .requestMatchers("/api/projects").authenticated()  // ✅ Доступ только авторизованным
+//                        .requestMatchers("/api/projects").authenticated()  // ✅ Доступ только авторизованным
                         .requestMatchers("/api/notes").authenticated()  // ✅ Доступ только авторизованным
                         .anyRequest().authenticated()
                 )
@@ -76,7 +80,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        System.out.println("SecurityConfig загружен. Все запросы к /api/auth/** разрешены.");
+        System.out.println("SecurityConfig загружен. Проверяем доступ к /api/projects.");
         return http.build();
     }
 

@@ -10,6 +10,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -30,12 +31,17 @@ public class ProjectService {
     }
 
     public UUID getCurrentUserId() {
+
         return userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
     }
 
     public List<Project> getAllProjects() {
         UUID userId = getCurrentUserId();
-        return projectRepository.findAllByUserId(userId);
+        System.out.println("Текущий пользователь: "+userId);
+        List<Project> foundedProjects = new ArrayList<>();
+        foundedProjects=projectRepository.findAllByUserId(userId);
+        System.out.println("Нашлись проекты: "+foundedProjects);
+        return foundedProjects;
     }
 
     // Получение проекта по ID

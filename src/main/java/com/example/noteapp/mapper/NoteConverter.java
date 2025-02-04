@@ -6,6 +6,7 @@ import com.example.noteapp.model.Note;
 import com.example.noteapp.model.NoteAudio;
 import com.example.noteapp.model.NoteFile;
 import com.example.noteapp.model.OpenGraphData;
+import com.example.noteapp.repository.UserRepository;
 import com.example.noteapp.service.NoteService;
 import com.example.noteapp.service.ProjectService;
 import com.example.noteapp.service.TagService;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -25,9 +27,10 @@ public class NoteConverter extends AbstractConverter {
     private final NoteFileConverter noteFileConverter;
     private final NoteAudioConverter noteAudioConverter;
     private final UserController userController;
+    private final UserRepository userRepository;
 
 
-    public NoteConverter(ProjectService projectService, TagService tagService, NoteService noteService, NoteFileConverter noteFileConverter, NoteAudioConverter noteAudioConverter, UserController userController) {
+    public NoteConverter(ProjectService projectService, TagService tagService, NoteService noteService, NoteFileConverter noteFileConverter, NoteAudioConverter noteAudioConverter, UserController userController, UserRepository userRepository) {
         super();
         this.projectService = projectService;
         this.tagService = tagService;
@@ -35,6 +38,7 @@ public class NoteConverter extends AbstractConverter {
         this.noteFileConverter = noteFileConverter;
         this.noteAudioConverter = noteAudioConverter;
         this.userController = userController;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -62,7 +66,8 @@ public class NoteConverter extends AbstractConverter {
             note.setTitle(dto.getTitle());
             note.setCreatedAt(dto.getCreatedAt());
             note.setChangedAt(dto.getChangedAt());
-            note.setUser(userController.getUserByUserId(dto.getUserId()));
+            UUID currentUser= userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
+            note.setUser(userController.getUserByUserId(currentUser));
 
             if (dto.getOpenGraphData() != null) {
                 List<OpenGraphData> openGraphDataList = dto.getOpenGraphData().entrySet().stream()

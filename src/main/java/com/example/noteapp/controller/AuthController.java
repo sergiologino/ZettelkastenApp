@@ -14,6 +14,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -22,10 +24,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Base64;
-import java.util.UUID;
+import java.util.*;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.client.RestTemplate;
@@ -41,14 +41,16 @@ public class AuthController {
     private final Map<String, String> stateStore = new HashMap<>();
     private final PasswordEncoder passwordEncoder;
     private final ProjectService projectService;
+    private final ProjectRepository projectRepository;
 
 
-    public AuthController(UserService userService, UserRepository userRepository, JwtTokenProvider jwtTokenProvider, PasswordEncoder passwordEncoder, ProjectService projectService) {
+    public AuthController(UserService userService, UserRepository userRepository, JwtTokenProvider jwtTokenProvider, PasswordEncoder passwordEncoder, ProjectService projectService, ProjectRepository projectRepository) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
         this.projectService = projectService;
+        this.projectRepository = projectRepository;
     }
 
 
@@ -56,15 +58,27 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "Авторизация пользователя", description = "Авторизация пользователя и выдача токенов")
     public ResponseEntity<Map<String, String>> login(@RequestBody User user) {
+        System.out.println("Попытка авторизации: " + user.getUsername());
+        System.out.println("Введенный пароль: " + user.getPassword());
+
         return userService.findByUsername(user.getUsername())
-                .filter(u -> passwordEncoder.matches(user.getPassword(), u.getPassword()))
                 .map(u -> {
+                    System.out.println("Проверяем пароль: " + user.getPassword());
+                    System.out.println("Пароль из БД: " + u.getPassword());
+                    System.out.println("Совпадает ли пароль? " + passwordEncoder.matches(user.getPassword(), u.getPassword()));
+
+                    if (!passwordEncoder.matches(user.getPassword(), u.getPassword())) {
+                        return ResponseEntity.status(401).body(Collections.singletonMap("error", "Неверный логин или пароль"));
+                    }
                     String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername());
                     String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername());
 
                     Map<String, String> tokens = new HashMap<>();
                     tokens.put("accessToken", accessToken);
                     tokens.put("refreshToken", refreshToken);
+                    System.out.println("Пароль, который пришел: " + user.getPassword());
+                    System.out.println("Пароль из БД: " + u.getPassword());
+                    System.out.println("Пароли совпадают? " + passwordEncoder.matches(user.getPassword(), u.getPassword()));
                     return ResponseEntity.ok(tokens);
                 })
                 .orElse(ResponseEntity.status(401).build());
@@ -162,47 +176,73 @@ public class AuthController {
     )
     public ResponseEntity<String> register(@RequestBody UserRegistrationDTO userDTO) {
 
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            System.out.println("Контекст не должен быть установлен при регистрации!");
+        }
 
-        if (userRepository.findByUsername(userDTO.getUsername()) != null) {
+        // 🛑 Проверяем, есть ли пользователь в БД перед синхронизацией
+        if (userService.findByUsername(userDTO.getUsername()).isPresent()) {
+            System.out.println("ОБНАРУЖЕН ПОЛЬЗОВАТЕЛЬ! " + userDTO.getUsername());
             return ResponseEntity.badRequest().body("Пользователь уже существует.");
         }
+        String hashedPassword = passwordEncoder.encode(userDTO.getPassword());
+        System.out.println("Хешированный пароль: " + hashedPassword);
+
+        // ✅ Сначала вызываем `syncUser()`, но НЕ сохраняем пользователя!
         User user = new User();
         user.setUsername(userDTO.getUsername());
-        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        user.setPassword(hashedPassword);
         user.setEmail(userDTO.getEmail());
-        System.out.println("Регистрируем пользователя: " + user.getUsername());
+
+
+
+
         ResponseEntity<String> response = syncUser(user);
         System.out.println("Ответ syncUser: " + response.getStatusCode());
 
         if (!response.getStatusCode().is2xxSuccessful()) {
             return ResponseEntity.status(response.getStatusCode()).body("Ошибка при синхронизации с приложением.");
         }
+
+        // ✅ Теперь сохраняем пользователя в БД только после успешного syncUser
+        //userService.registerUser(user);
+
         return ResponseEntity.ok("Пользователь успешно зарегистрирован.");
     }
 
+
     @PostMapping("/sync")
-    public ResponseEntity<String> syncUser(@RequestBody User user) {
-        User existingUser = userRepository.findByUsername(user.getUsername());
-            if (existingUser != null) {
-                System.out.println("Ошибка регистрации: пользователь уже существует");
-                return ResponseEntity.badRequest().body("Пользователь уже существует.");
-            }
+        public ResponseEntity<String> syncUser(@RequestBody User user) {
+//          Убираем проверку, потому что она уже есть в `register()`
+        System.out.println("Синхронизация данных пользователя: " + user.getUsername());
 
-        userRepository.save(user);
-        // Создаем проект "Главное"
-        Project defaultProject = new Project();
-        defaultProject.setName("Главное");
-        defaultProject.setDescription("Проект по умолчанию");
-        defaultProject.setColor("#D3D3D3"); // Светло-серый цвет
-        defaultProject.setPosition(1);
-        defaultProject.setDefault(true);
-        defaultProject.setUserId(user.getId());
-        defaultProject.setCreatedAt(LocalDateTime.now());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        projectService.saveProject(defaultProject); // Сохраняем проект в базу
+        if (authentication != null) {
+            String currentUser = authentication.getName();
+            System.out.println("Пользователь, выполняющий синхронизацию: " + currentUser);
+        } else {
+            userService.registerUser(user);
+            System.out.println("✅ Новый пользователь зарегистрирован в syncUser.");
 
-        return ResponseEntity.ok("Пользователь успешно синхронизирован.");
+
+            // ❌ Не вызываем `userService.registerUser(user)`, он уже сохранён!
+
+            // ✅ Создаём проект "Главное" для пользователя
+            Project defaultProject = new Project();
+            defaultProject.setName("Главное");
+            defaultProject.setDescription("Проект по умолчанию");
+            defaultProject.setColor("#BD10E0");
+            defaultProject.setPosition(1);
+            defaultProject.setDefault(true);
+            defaultProject.setUserId(user.getId());
+            defaultProject.setCreatedAt(LocalDateTime.now());
+
+            projectRepository.save(defaultProject);
+
+        }
+
+            return ResponseEntity.ok("Пользователь успешно синхронизирован.");
+        }
     }
-
-}
 

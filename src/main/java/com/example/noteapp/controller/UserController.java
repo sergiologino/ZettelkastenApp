@@ -31,8 +31,11 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<User> getCurrentUser(@RequestHeader("Authorization") String token) {
-        String userId = jwtTokenProvider.getUserIdFromToken(token.replace("Bearer ", ""));
-        User user = userRepository.findById(UUID.fromString(userId)).orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+        String userName = jwtTokenProvider.getUserIdFromToken(token.replace("Bearer ", ""));
+        User user = userRepository.findByUsername(userName);
+        if (user == null) {
+            throw new RuntimeException("Пользователь не найден: " + userName);
+        }
         return ResponseEntity.ok(user);
     }
 

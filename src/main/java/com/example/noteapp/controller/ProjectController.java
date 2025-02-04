@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.annotation.PostConstruct;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,8 +22,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/projects")
+@RequestMapping(value = "/api/projects", produces = "application/json")
 public class ProjectController {
+
+    @PostConstruct
+    public void init() {
+        System.out.println("✅ ProjectController зарегистрирован в Spring");
+    }
 
     private final ProjectService projectService;
     private final NoteService noteService;
@@ -68,9 +74,11 @@ public class ProjectController {
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
     @PostMapping
-    public Project createProject(@RequestBody Project project) {
+    public ResponseEntity<Project> createProject(@RequestBody Project project) {
 
-        return projectService.saveProject(project);
+        System.out.println(" Вызван createProject с данными: " + project.getName());
+        Project createdProject = projectService.saveProject(project);
+        return ResponseEntity.ok(createdProject);
     }
 
     @Operation(summary = "Удалить проект", description = "Удаляет проект по указанному идентификатору.")

@@ -26,14 +26,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String requestURI = request.getRequestURI();
-
         System.out.println("Запрос: " + requestURI);
+
         // Разрешить запросы без токена для регистрации и логина
-        if (requestURI.startsWith("/api/auth/register") || requestURI.startsWith("/api/auth/login") || requestURI.startsWith("/auth/login") || requestURI.startsWith("/auth/register")) {
-            chain.doFilter(request, response);
-            return;
+        String authHeader = null; // 💡 ГАРАНТИРОВАННО ОБЪЯВЛЯЕМ ЗАРАНЕЕ
+
+        try {
+            authHeader = request.getHeader("Authorization"); // 💡 Теперь переменная существует
+        } catch (Exception e) {
+            System.err.println("Ошибка при получении заголовка Authorization: " + e.getMessage());
         }
-        String authHeader = request.getHeader("Authorization");
+
         String token = null;
         String username = null;
 
@@ -49,10 +52,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (jwtTokenProvider.validateToken(token, userDetails)) {
                 var authentication = jwtTokenProvider.getAuthentication(token, userDetails);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                System.out.println("Пользователь " + username + " успешно аутентифицирован");
             } else {
+                System.out.println("Ошибка: токен невалидный");
                 SecurityContextHolder.getContext().setAuthentication(null);
             }
         }
+
+        if (requestURI.startsWith("/api/auth/register") ||
+                requestURI.startsWith("/api/auth/login") ||
+                requestURI.startsWith("/api/auth/sync")) {
+            System.out.println("Передаем управление следующему фильтру");
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // Передача запроса дальше в цепочке фильтров
+        chain.doFilter(request, response);
     }
+
 }
 

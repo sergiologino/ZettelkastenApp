@@ -1,9 +1,12 @@
 package com.example.noteapp.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +30,7 @@ public class User {
     private String email;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference // Обозначаем "родительскую" сторону связи
     private List<Note> notes;
 
     @Column(name = "tlg_username", length = 32)
@@ -38,7 +42,7 @@ public class User {
     @Column(name = "billing", nullable = false)
     private boolean billing;  // Признак платного тарифа
 
-    @Lob
+//    @Lob
     @Column(name = "avatar", columnDefinition = "BYTEA")
     private byte[] avatar;  // Аватар пользователя (хранится как BLOB)
 
@@ -46,6 +50,11 @@ public class User {
     private boolean colorTheme;  // Темная/светлая тема
 
     private boolean enabled = true;
+
+
+
+    @Column(name = "telegram_chat_id", unique = true)
+    private String telegramChatId;
 
     // Геттеры и сеттеры
     public UUID getId() {
@@ -116,9 +125,12 @@ public class User {
         return avatar;
     }
 
-    public void setAvatar(byte[] avatar) {
-        this.avatar = avatar;
-    }
+//    public void setAvatar(MultipartFile file) throws IOException {
+//        this.avatar = file.getBytes();
+//    }
+public void setAvatar(byte[] avatar) {
+        this.avatar = null;
+}
 
     public boolean isColorTheme() {
         return colorTheme;
@@ -126,5 +138,19 @@ public class User {
 
     public void setColorTheme(boolean colorTheme) {
         this.colorTheme = colorTheme;
+    }
+
+    public boolean getTelegramChatId() {
+    }
+
+    public void setTelegramChatId(String chatId) {
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

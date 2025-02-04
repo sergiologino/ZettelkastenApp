@@ -309,11 +309,21 @@ public class NoteService {
             Project defaultProject = projectService.getDefaultProjectForUser(userId);
             note.setProject(defaultProject);
         }
-            note.setContent("Проект по умолчанию " + System.lineSeparator() + note.getContent());
+            note.setContent("Проект по умолчанию, " + System.lineSeparator() + note.getContent());
             User user=userRepository.findById(userId).orElseThrow();
             note.setUser(user);
 
-        noteRepository.save(note);
+        // ✅ Сначала сохраняем заметку, чтобы Hibernate знал её ID
+        if (note.getPositionX() == null) {
+            note.setPositionX(100L);
+        }
+        if (note.getPositionY() == null) {
+            note.setPositionY(100L);
+        }
+//}
+        Note savedNote = noteRepository.save(note);
+
+//        noteRepository.save(note);
         // Обрабатываем ссылки и сохраняем Open Graph данные
         boolean useOpenGraph = openGraphDataEnabled;
         if (useOpenGraph) {
@@ -337,7 +347,7 @@ public class NoteService {
                 System.out.println("existingData содержит: " + existingData); // проверяем что получилось в existingData
 
                 // Добавляем данные в объект Note
-                note.getOpenGraphData().addAll(existingData);
+                savedNote.getOpenGraphData().addAll(existingData);
 
                 // Сохраняем данные в базу через репозиторий
                 openGraphDataRepository.saveAll(existingData);
@@ -346,10 +356,11 @@ public class NoteService {
 
 
             System.out.println("OpenGraphData после обработки: " + note.getOpenGraphData());
-            return noteRepository.save(note);
+//            return noteRepository.save(note);
 
         }
-        return note;
+//        noteRepository.save(savedNote);
+        return savedNote;
 
 
         //TODO временно, чтобы не отправлять на анализ, потом убрать, правильная есть в конце метода

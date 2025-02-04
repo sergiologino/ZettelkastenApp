@@ -2,6 +2,8 @@ package com.example.noteapp.service;
 
 import com.example.noteapp.model.User;
 import com.example.noteapp.repository.UserRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -19,12 +21,22 @@ public class UserService {
     }
 
     public User registerUser(User user) {
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+//        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
     public Optional<User> findByUsername(String username) {
 
         return Optional.ofNullable(userRepository.findByUsername(username));
+    }
+
+    public Optional<User> getAuthenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getPrincipal() == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of((User) authentication.getPrincipal());
     }
 }

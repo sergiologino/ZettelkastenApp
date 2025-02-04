@@ -166,11 +166,21 @@ public class NoteController {
 
             //--------------------- ЗАГЛУШКИ ---------------------------
             noteDto.setNeuralNetwork("YandexGPT-Lite");
-            noteDto.setAnalyze(true);
+            noteDto.setAnalyze(false);
+
+            List<String> newUrls = new ArrayList<>();
+            if(noteDto.getUrls()!=null || !noteDto.getUrls().isEmpty()) {
+                  newUrls=noteDto.getUrls();
+            };
+            if (noteDto.getId() == null) {
+                noteDto.setId(UUID.randomUUID()); // ✅ Генерируем ID
+            }
 
 
 
-            Note savedNote = noteService.createNote(noteConverter.toEntity(noteDto), noteDto.getUrls());
+
+            Note newNote = noteConverter.toEntity(noteDto);
+            Note savedNote = noteService.createNote(newNote, newUrls);
             NoteDTO newNoteDTO = noteConverter.toDTO(savedNote);
 
             return ResponseEntity.ok(newNoteDTO);
@@ -206,11 +216,16 @@ public class NoteController {
             }
     )
     public ResponseEntity<?> createMixedNote(@RequestBody Map<String, Object> requestBody) {
+        if (requestBody.get("userId") == null) {
+            return ResponseEntity.badRequest().body("Ошибка: Не указан пользователь.");
+        }
+
         try {
             String content = (String) requestBody.get("content");
             String url = (String) requestBody.get("url");
             String photoUrl = (String) requestBody.get("photoUrl");
             Boolean fromTelegram =(Boolean) requestBody.get("fromTelegram");
+            String userId =(String) requestBody.get("userId");
 
             Note note = new Note();
             note.setContent(content);
@@ -250,6 +265,14 @@ public class NoteController {
             }
             Tag newTag=tagService.findOrCreateTag("telegram",true);
             note.getTags().add(newTag);
+
+            User user=userRepository.findById(UUID.fromString(userId)).orElseThrow();
+            if (user==null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("в NoteController не найден пользователь получатель заметки: ");
+            } else {
+            note.setUser(user);
+            }
 
             Note savedNote = noteService.saveNote(note);
             return ResponseEntity.ok("Заметка успешно создана с текстом, ссылкой и/или изображением.");
