@@ -23,18 +23,18 @@ import java.util.stream.Collectors;
 public class NoteConverter extends AbstractConverter {
     private final ProjectService projectService;
     private final TagService tagService;
-    private final NoteService noteService;
+
     private final NoteFileConverter noteFileConverter;
     private final NoteAudioConverter noteAudioConverter;
     private final UserController userController;
     private final UserRepository userRepository;
 
 
-    public NoteConverter(ProjectService projectService, TagService tagService, NoteService noteService, NoteFileConverter noteFileConverter, NoteAudioConverter noteAudioConverter, UserController userController, UserRepository userRepository) {
+    public NoteConverter(ProjectService projectService, TagService tagService, NoteFileConverter noteFileConverter, NoteAudioConverter noteAudioConverter, UserController userController, UserRepository userRepository) {
         super();
         this.projectService = projectService;
         this.tagService = tagService;
-        this.noteService = noteService;
+
         this.noteFileConverter = noteFileConverter;
         this.noteAudioConverter = noteAudioConverter;
         this.userController = userController;

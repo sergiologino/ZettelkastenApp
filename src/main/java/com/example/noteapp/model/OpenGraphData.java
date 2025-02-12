@@ -28,10 +28,11 @@ public class OpenGraphData {
     @Setter
     private String image;
 
-
-
     @Column(name="created_at",nullable = true)
     private LocalDateTime createdAt;
+
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
 
     @Setter
@@ -41,6 +42,16 @@ public class OpenGraphData {
     private Note note;
 
     // Геттеры и сеттеры
+
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+
     public UUID getId() {
         return id;
     }

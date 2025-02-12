@@ -29,7 +29,7 @@ public class NoteFile {
     private LocalDateTime createdAt;
 
     //@JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "note_id", nullable = false)
     @JsonBackReference // Указывает, что это обратная ссылка
     private Note note;

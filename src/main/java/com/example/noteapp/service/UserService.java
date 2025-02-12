@@ -2,18 +2,33 @@ package com.example.noteapp.service;
 
 import com.example.noteapp.model.User;
 import com.example.noteapp.repository.UserRepository;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class UserService {
 
+
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+//    @Value("${file.upload-dir}") // Укажите путь для загрузки аватаров
+//    private String uploadDir;
+
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
@@ -38,5 +53,51 @@ public class UserService {
         }
 
         return Optional.of((User) authentication.getPrincipal());
+    }
+
+    @Transactional
+    public String updateUserAvatar(UUID userId, MultipartFile avatarFile) {
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+
+            // Генерируем уникальное имя файла
+            String fileName = userId + "_" + avatarFile.getOriginalFilename();
+            Path uploadPath = Paths.get("uploads").toAbsolutePath().normalize();
+
+            // Создаем папку, если ее нет
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            // Полный путь к файлу
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(avatarFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Сохраняем путь к файлу в БД
+            String avatarUrl = "/uploads/" + fileName;
+            user.setAvatarUrl(avatarUrl);
+            userRepository.save(user);
+
+            return avatarUrl; // Возвращаем новый URL
+        } catch (IOException e) {
+            throw new RuntimeException("Ошибка загрузки аватара", e);
+        }
+    }
+
+    @Transactional
+    public void updateUserData(UUID userId, User updatedUser) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+
+        user.setUsername(updatedUser.getUsername());
+        user.setEmail(updatedUser.getEmail());
+        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+        }
+        user.setTlgUsername(updatedUser.getTlgUsername());
+        user.setPhoneNumber(updatedUser.getPhoneNumber());
+
+        userRepository.save(user);
     }
 }

@@ -1,6 +1,8 @@
 package com.example.noteapp.controller;
 
+import com.example.noteapp.dto.NoteAudioDTO;
 import com.example.noteapp.dto.NoteDTO;
+import com.example.noteapp.dto.NoteFileDTO;
 import com.example.noteapp.dto.OpenGraphRequest;
 import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.*;
@@ -36,7 +38,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/notes")
-@CrossOrigin(origins = "http://localhost:3000") // Укажите ваш фронтенд-URL
+@CrossOrigin(origins = "http://localhost:3000")
 public class NoteController {
 
     private final NoteService noteService;
@@ -80,6 +82,18 @@ public class NoteController {
         return notes.stream().map(noteConverter::toDTO).collect(Collectors.toList());
     }
 
+    @Operation(summary = "Поиск заметок", description = "Ищет заметки по тексту, OpenGraph URL и именам файлов.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Результаты поиска успешно получены"),
+            @ApiResponse(responseCode = "400", description = "Некорректный запрос"),
+            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
+    })
+    @GetMapping("/search")
+    public ResponseEntity<List<NoteDTO>> searchNotes(@RequestParam String query) {
+        List<NoteDTO> results = noteService.searchNotes(query);
+        return ResponseEntity.ok(results);
+    }
+
 
     @Operation(summary = "Получить все заметки с указанными тэгами")
     @ApiResponses(value = {
@@ -99,6 +113,8 @@ public class NoteController {
     public List<String> getAllUniqueTags() {
         return noteService.getAllUniqueTags();
     }
+
+//
 
 
     @Operation(summary = "Обновить заметку ", description = "Обновляет заметку ")
@@ -163,8 +179,30 @@ public class NoteController {
                 return ResponseEntity.badRequest().body("Текст заметки не может быть пустым.");
             }
 
+            List<NoteFileDTO> newFiles = Optional.ofNullable(noteDto.getFiles())
+                    .orElse(Collections.emptyList()) // ✅ Если null, подставляем пустой список
+                    .stream()
+                    .map(file -> new NoteFileDTO(
+                            file.getId(),
+                            file.getFileUrl(),
+                            file.getName(),
+                            file.getFilePath(),
+                            file.getCreatedAt())) // ✅ Корректный маппинг
+                    .collect(Collectors.toList());
+            List<NoteAudioDTO> newAudios = Optional.ofNullable(noteDto.getAudios())
+                    .orElse(Collections.emptyList()) // ✅ Если null, подставляем пустой список
+                    .stream()
+                    .map(audio -> new NoteAudioDTO(
+                            audio.getId(),
+                            audio.getAudioName(),
+                            audio.getUrl(),
+                            audio.getCreatedAt(),
+                            audio.getType(),
+                            audio.getSize()))
+                    .collect(Collectors.toList());
 
             //--------------------- ЗАГЛУШКИ ---------------------------
+
             noteDto.setNeuralNetwork("YandexGPT-Lite");
             noteDto.setAnalyze(false);
 
@@ -175,9 +213,6 @@ public class NoteController {
             if (noteDto.getId() == null) {
                 noteDto.setId(UUID.randomUUID()); // ✅ Генерируем ID
             }
-
-
-
 
             Note newNote = noteConverter.toEntity(noteDto);
             Note savedNote = noteService.createNote(newNote, newUrls);
@@ -193,7 +228,7 @@ public class NoteController {
 
     // Обработка смешанных сообщений
 
-    @PostMapping("/mixed")
+    @PostMapping({"/mixed", })
     @Operation(
             summary = "Создать смешанную заметку",
             description = "Создает новую заметку с текстом, ссылками и/или изображениями. Если проект не указан, используется проект 'from Telegram'.",
@@ -271,7 +306,7 @@ public class NoteController {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body("в NoteController не найден пользователь получатель заметки: ");
             } else {
-            note.setUser(user);
+                note.setUser(user);
             }
 
             Note savedNote = noteService.saveNote(note);
@@ -279,6 +314,85 @@ public class NoteController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Ошибка при создании смешанной заметки: " + e.getMessage());
+        }
+    }
+
+
+    @PostMapping("/{noteId}/files")
+    public ResponseEntity<Note> uploadFilesToNote(@PathVariable UUID noteId, @RequestParam("files") List<MultipartFile> files) {
+        Note updatedNote = noteService.addFilesToNote(noteId, files);
+        return ResponseEntity.ok(updatedNote);
+    }
+
+    @PostMapping("/{noteId}/audios")
+    public ResponseEntity<Note> uploadAudiosToNote(
+            @PathVariable UUID noteId,
+            @RequestParam("audios") List<MultipartFile> audios) {
+        Note updatedNote = noteService.addAudiosToNote(noteId, audios);
+        return ResponseEntity.ok(updatedNote);
+    }
+
+    @PutMapping("/{noteId}/coordinates")
+    @Operation(summary = "Обновить координаты заметки", description = "Обновляет координаты X и Y для указанной заметки.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Координаты успешно обновлены"),
+            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
+            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
+    })
+    public ResponseEntity<NoteDTO> updateNoteCoordinates(
+            @PathVariable UUID noteId,
+            @RequestBody Map<String, Long> coordinates) {
+        try {
+            Long x = coordinates.get("x");
+            Long y = coordinates.get("y");
+
+            Note updatedNote = noteService.updateNoteCoordinates(noteId, x, y);
+            return ResponseEntity.ok(noteConverter.toDTO(updatedNote));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+
+    @GetMapping("/download/audio/{filename:.+}")
+    public ResponseEntity<Resource> downloadAudioFile(@PathVariable String filename) {
+        Path filePath = Paths.get("E:/uploaded/uploaded-audio").resolve(filename).normalize();
+        System.out.println("Эндпойнт /download/audio/filename downloadAudioFile: "+filePath);
+
+        try {
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+        } catch (MalformedURLException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/download/file/{filename:.+}")
+    public ResponseEntity<Resource> downloadFile(@PathVariable String filename) {
+        Path filePath = Paths.get("E:/uploaded/uploaded-files").resolve(filename).normalize();
+        System.out.println("Эндпойнт /download/file/filename downloadFile: "+filePath);
+
+        try {
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+        } catch (MalformedURLException e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 
@@ -294,8 +408,6 @@ public class NoteController {
     public Note analyzeNote(@PathVariable UUID noteId, @RequestParam String chatId) {
         return noteService.analyzeAndAssignTags(noteId, chatId);
     }
-
-
 
     @Operation(summary = "Получить заметку по ID", description = "Возвращает заметку с указанным идентификатором.")
     @ApiResponses(value = {
@@ -426,95 +538,5 @@ public class NoteController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
-    @PostMapping("/{noteId}/files")
-    public ResponseEntity<Note> uploadFilesToNote(
-            @PathVariable UUID noteId,
-            @RequestParam("files") List<MultipartFile> files) {
-        Note updatedNote = noteService.addFilesToNote(noteId, files);
-        return ResponseEntity.ok(updatedNote);
-    }
-
-    @PostMapping("/{noteId}/audios")
-    public ResponseEntity<Note> uploadAudiosToNote(
-            @PathVariable UUID noteId,
-            @RequestParam("audios") List<MultipartFile> audios) {
-        Note updatedNote = noteService.addAudiosToNote(noteId, audios);
-        return ResponseEntity.ok(updatedNote);
-    }
-
-    @PutMapping("/{noteId}/coordinates")
-    @Operation(summary = "Обновить координаты заметки", description = "Обновляет координаты X и Y для указанной заметки.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Координаты успешно обновлены"),
-            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
-            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
-    })
-    public ResponseEntity<NoteDTO> updateNoteCoordinates(
-            @PathVariable UUID noteId,
-            @RequestBody Map<String, Long> coordinates) {
-        try {
-            Long x = coordinates.get("x");
-            Long y = coordinates.get("y");
-
-            Note updatedNote = noteService.updateNoteCoordinates(noteId, x, y);
-            return ResponseEntity.ok(noteConverter.toDTO(updatedNote));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    @GetMapping("/download/audio/{filename:.+}")
-    public ResponseEntity<Resource> downloadAudioFile(@PathVariable String filename) {
-        Path filePath = Paths.get("E:/uploaded/uploaded-audio").resolve(filename).normalize();
-        System.out.println("Эндпойнт /download/audio/filename downloadAudioFile: "+filePath);
-
-        try {
-            Resource resource = new UrlResource(filePath.toUri());
-            if (!resource.exists()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .body(resource);
-        } catch (MalformedURLException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    @GetMapping("/download/file/{filename:.+}")
-    public ResponseEntity<Resource> downloadFile(@PathVariable String filename) {
-        Path filePath = Paths.get("E:/uploaded/uploaded-files").resolve(filename).normalize();
-        System.out.println("Эндпойнт /download/file/filename downloadFile: "+filePath);
-
-        try {
-            Resource resource = new UrlResource(filePath.toUri());
-            if (!resource.exists()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .body(resource);
-        } catch (MalformedURLException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    // перенес в отдельный контроллер UserController
-//    @GetMapping("/users/me")
-//    public ResponseEntity<User> getCurrentUser(@RequestHeader("Authorization") String token) {
-//        String username = jwtTokenUtil.getUsernameFromToken(token.replace("Bearer ", ""));
-//        User user = userRepository.findByUsername(username);
-//        if (user != null) {
-//            return ResponseEntity.ok(user);
-//        } else {
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-//        }
-//    }
-
 }
 

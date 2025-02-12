@@ -1,6 +1,7 @@
 package com.example.noteapp.config;
 
 import com.example.noteapp.bot.NoteBot;
+import com.example.noteapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,9 +11,19 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 @Configuration
 public class TelegramBotConfig {
 
+    private final UserRepository userRepository;  // 👈 Добавляем зависимость
+
+    public TelegramBotConfig(UserRepository userRepository,
+                             @Value("${telegram.bot.token}") String botToken,
+                             @Value("${telegram.bot.username}") String botUsername) {
+        this.userRepository = userRepository;
+        this.botToken = botToken;
+        this.botUsername = botUsername;
+    }
+
     @Bean
     public NoteBot noteBot(TelegramBotsApi telegramBotsApi) throws Exception {
-        NoteBot bot = new NoteBot(botToken, botUsername);
+        NoteBot bot = new NoteBot(userRepository ,botToken, botUsername);
         telegramBotsApi.registerBot(bot);
         return bot;
     }

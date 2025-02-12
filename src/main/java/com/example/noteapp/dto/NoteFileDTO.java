@@ -22,7 +22,7 @@ public class NoteFileDTO implements Serializable {
 
 
 
-    public NoteFileDTO(UUID id, String url, String name, String filePath, String fileUrl) {
+    public NoteFileDTO(UUID id, String url, String name, String filePath, LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.fileUrl = fileUrl;

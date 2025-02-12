@@ -19,6 +19,7 @@ CREATE TABLE  IF NOT EXISTS public.users (
     phone_number VARCHAR(255),
     billing boolean DEFAULT FALSE,
     avatar bytea,
+    avatar_url VARCHAR(255),
     telegram_chat_id VARCHAR(255) UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -176,3 +177,8 @@ CREATE TABLE  IF NOT exists public.note_tags (
 CREATE INDEX idx_user_notes ON notes(user_id);
 CREATE INDEX idx_user_projects ON projects(user_id);
 CREATE INDEX idx_user_tags ON tags(user_id);
+CREATE INDEX idx_notes_content ON notes USING gin(to_tsvector('russian', content));
+CREATE INDEX idx_open_graph_url ON open_graph_data (url);
+CREATE INDEX idx_note_files_name ON note_files (original_name);
+CREATE INDEX idx_note_audios_name ON note_audios (original_name);
+

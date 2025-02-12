@@ -46,6 +46,9 @@ public class User {
     @Column(name = "avatar", columnDefinition = "BYTEA")
     private byte[] avatar;  // Аватар пользователя (хранится как BLOB)
 
+    @Column(name = "avatar_url", nullable = true)
+    private String avatarUrl;
+
     @Column(name = "color_theme", nullable = false)
     private boolean colorTheme;  // Темная/светлая тема
 
@@ -140,11 +143,12 @@ public void setAvatar(byte[] avatar) {
         this.colorTheme = colorTheme;
     }
 
-    public boolean getTelegramChatId() {
-    }
+    public boolean getTelegramChatId() {return telegramChatId != null;
+
+    };
 
     public void setTelegramChatId(String chatId) {
-    }
+    };
 
     public boolean isEnabled() {
         return enabled;

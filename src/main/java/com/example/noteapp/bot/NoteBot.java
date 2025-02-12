@@ -35,6 +35,7 @@ public class NoteBot extends TelegramLongPollingBot {
         this.botUsername = botUsername;
     }
 
+
     @Override
     public String getBotUsername() {
         return botUsername;
@@ -54,7 +55,7 @@ public class NoteBot extends TelegramLongPollingBot {
             String text = message.getText();
 
             // Ищем пользователя по Telegram username
-            Optional<User> userOptional = userRepository.findByTlgUsername(username);
+            Optional<User> userOptional = userRepository.findByTlgUsername(username.replace("@", ""));
 
             if (userOptional.isEmpty()) {
                 sendResponse(chatId, "Ошибка: Ваш Telegram-аккаунт не привязан к системе.");

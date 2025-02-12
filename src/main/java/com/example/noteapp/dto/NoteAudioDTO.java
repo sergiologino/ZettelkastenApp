@@ -17,11 +17,7 @@ public class NoteAudioDTO implements Serializable {
     private UUID id;
     private String name;
     private String url;
-
-
-
     private LocalDateTime createdAt;
-
     @Setter
     @Getter
     private String type;
@@ -45,5 +41,17 @@ public class NoteAudioDTO implements Serializable {
 
     public void setAudioPath(String url) {
         this.url = url;
+    }
+
+    public NoteAudioDTO(UUID id, String name, String url, LocalDateTime createdAt, String type, BigDecimal size) {
+        this.id = id;
+        this.name = name;
+        this.url = url;
+        this.createdAt = createdAt;
+        this.type = type;
+        this.size = size;
+    }
+
+    public NoteAudioDTO() {
     }
 }

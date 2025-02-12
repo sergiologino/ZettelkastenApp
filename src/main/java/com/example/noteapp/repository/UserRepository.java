@@ -14,7 +14,7 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
     User findByUsername(String username);
 
-    Optional<User> findByTlgUsername(String username);
+    Optional<User> findByTlgUsername(String tlgUsername);
 
     Optional<User> findByTelegramChatId(String telegramChatId);
 }
@@ -22,4 +22,4 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 //    @Modifying
 //    @Query("INSERT INTO users (avatar, ...) VALUES (:avatar, ...)")
 //    void saveUser(@Param("avatar") byte[] avatar);
-}
+

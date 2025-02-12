@@ -68,5 +68,21 @@ public interface NoteRepository extends JpaRepository<Note, UUID> {
     // Получение всех уникальных тегов
     @Query("SELECT DISTINCT t.name FROM Tag t Where t.userId =:userId")
     List<String> findAllUniqueTags(@Param("userId") UUID userId);
+
+    @Query(value = """
+        SELECT DISTINCT n.*
+        FROM notes n
+        LEFT JOIN open_graph_data og ON og.note_id = n.id
+        LEFT JOIN note_files nf ON nf.note_id = n.id
+        LEFT JOIN note_audios na ON nf.note_id = n.id
+        WHERE
+            to_tsvector('russian', n.content) @@ plainto_tsquery(:query)
+            OR LOWER(og.url) LIKE LOWER(CONCAT('%', :query, '%'))
+            OR LOWER(nf.original_name) LIKE LOWER(CONCAT('%', :query, '%'))
+            OR LOWER(na.original_name) LIKE LOWER(CONCAT('%', :query, '%'))
+        ORDER BY n.changed_at DESC
+        LIMIT 50
+    """, nativeQuery = true)
+    List<Note> searchNotes(@Param("query") String query);
 }
 
