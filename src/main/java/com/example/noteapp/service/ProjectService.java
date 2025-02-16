@@ -5,7 +5,6 @@ import com.example.noteapp.model.Project;
 import com.example.noteapp.repository.ProjectRepository;
 import com.example.noteapp.repository.UserRepository;
 import com.example.noteapp.utils.SecurityUtils;
-import com.nimbusds.jose.crypto.opts.UserAuthenticationRequired;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,13 +44,18 @@ public class ProjectService {
     }
 
     // Получение проекта по ID
-    public Project getProjectById(UUID id) {
-        UUID userId = getCurrentUserId();
+    public Project getProjectById(UUID id, UUID userId) {
+//        UUID userId = getCurrentUserId();
         return projectRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Project not found or access denied."));
     }
 
-    public Project getDefaultProjectForUser(UUID userId) {
+    public Project getDefaultProjectForUser() {
+        UUID userId = getCurrentUserId();
+        return projectRepository.findDefaultProjectByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Default project not found for user."));
+    }
+    public Project getDefaultBotProjectForUser(UUID userId) {
 
         return projectRepository.findDefaultProjectByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Default project not found for user."));
@@ -87,6 +91,7 @@ public class ProjectService {
         // Убираем связанные заметки для облегчения ответа
         dto.setNotes(Collections.emptyList());
         dto.setPosition(project.getPosition());
+        dto.setNoteCount(project.getNotes().size()); // Подсчет количества заметок
         return dto;
     }
 }

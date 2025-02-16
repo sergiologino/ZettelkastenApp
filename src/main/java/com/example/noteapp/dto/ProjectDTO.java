@@ -20,7 +20,7 @@ public class ProjectDTO {
     private LocalDateTime createdAt;
     private boolean isDefault;
     private int position;
-
+    private int noteCount; // Добавлено поле для количества заметок
     private List<NoteDTO> notes;
 
     // Конструкторы, геттеры и сеттеры

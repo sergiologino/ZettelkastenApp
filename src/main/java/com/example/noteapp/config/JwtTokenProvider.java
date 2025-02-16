@@ -69,7 +69,7 @@ public class JwtTokenProvider {
             System.out.println("Claims в токене: " + claims);
             return claims.getSubject();
         } catch (Exception e) {
-            System.out.println("Ошибка извлечения username из токена: " + e.getMessage());
+//            System.out.println("Ошибка извлечения username из токена: " + e.getMessage());
             return null;
         }
     }
@@ -94,7 +94,7 @@ public class JwtTokenProvider {
                     .parseClaimsJws(token)
                     .getBody();
         }catch (Exception e) {
-            System.out.println("Ошибка парсинга токена: " + e.getMessage());
+//            System.out.println("Ошибка парсинга токена: " + e.getMessage());
             return null;
         }
     }

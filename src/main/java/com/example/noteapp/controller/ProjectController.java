@@ -1,12 +1,12 @@
 package com.example.noteapp.controller;
 
-import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.dto.ProjectDTO;
 import com.example.noteapp.mapper.NoteConverter;
-import com.example.noteapp.model.Note;
 import com.example.noteapp.model.Project;
+import com.example.noteapp.repository.UserRepository;
 import com.example.noteapp.service.NoteService;
 import com.example.noteapp.service.ProjectService;
+import com.example.noteapp.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+
+
 @RestController
 @RequestMapping(value = "/api/projects", produces = "application/json")
 public class ProjectController {
@@ -31,13 +33,11 @@ public class ProjectController {
     }
 
     private final ProjectService projectService;
-    private final NoteService noteService;
-    private final NoteConverter noteConverter;
+    private final UserRepository userRepository;
 
-    public ProjectController(ProjectService projectService, NoteService noteService, NoteConverter noteConverter) {
+    public ProjectController(ProjectService projectService, NoteService noteService, NoteConverter noteConverter, UserRepository userRepository) {
         this.projectService = projectService;
-        this.noteService = noteService;
-        this.noteConverter = noteConverter;
+        this.userRepository = userRepository;
     }
 
     @ApiResponse(responseCode = "200", description = "Список проектов успешно возвращен",
@@ -61,7 +61,8 @@ public class ProjectController {
     })
     @GetMapping("/{id}")
     public Project getProjectById(@PathVariable UUID id) {
-        Project responseProject = projectService.getProjectById(id);
+        UUID userId = userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
+        Project responseProject = projectService.getProjectById(id, userId);
         return responseProject;
     }
 
@@ -90,7 +91,8 @@ public class ProjectController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deleteProjectById(@PathVariable UUID id) {
         projectService.deleteProjectById(id);
-        Project project = projectService.getProjectById(id);
+        UUID userId = userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
+        Project project = projectService.getProjectById(id, userId);
              //   .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Проект не найден"));
 
         // Удаляем связанные заметки TODO реализовать эндпойнт

@@ -56,20 +56,24 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/projects/**").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // Разрешаем preflight-запросы
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/notes/mixed").permitAll() // Разрешить запрос
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/notes/text").permitAll() // Разрешить запрос
 //                        .requestMatchers("/api/projects").authenticated()  // ✅ Доступ только авторизованным
                         .requestMatchers("/api/notes").authenticated()  // ✅ Доступ только авторизованным
                         .anyRequest().authenticated()
                 )
                 .anonymous(anonymous -> anonymous.disable()) // 💡 Отключаем анонимную аутентификацию
+
                 .exceptionHandling(exception -> exception
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            System.out.println("🚨 Запрос отклонён в AuthorizationFilter: " + request.getRequestURI());
+//                            System.out.println("🚨 Запрос отклонён в AuthorizationFilter: " + request.getRequestURI());
                             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Доступ запрещён");
-                        })
-//                .oauth2Login(oauth2 -> oauth2
-//                        .loginPage("/oauth2/authorization/yandex") // Настройка Yandex OAuth2
-//                        .defaultSuccessUrl("/dashboard")
-//                        .failureUrl("/auth?error")
+                        }))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/oauth2/authorization/yandex") // Настройка Yandex OAuth2
+                        .defaultSuccessUrl("/dashboard")
+                        .failureUrl("/auth?error")
                 )
                 .logout(logout -> logout
                         .logoutSuccessUrl("/auth")
@@ -80,7 +84,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        System.out.println("SecurityConfig загружен. Проверяем доступ к /api/projects.");
+//        System.out.println("SecurityConfig загружен. Проверяем доступ к /api/projects.");
         return http.build();
     }
 

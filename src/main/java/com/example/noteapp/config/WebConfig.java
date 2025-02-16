@@ -15,7 +15,7 @@ public class WebConfig {
 
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                System.out.println("WebConfig загружен: CORS включен");
+//                System.out.println("WebConfig загружен: CORS включен");
                 registry.addMapping("/api/**") // Разрешить CORS для всех эндпоинтов API
                         .allowedOriginPatterns("*")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Разрешённые методы

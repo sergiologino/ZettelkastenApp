@@ -89,7 +89,7 @@ public class Note {
     @JsonIgnore
     private List<OpenGraphData> openGraphData = new ArrayList<>();;
 
-    @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference // Указывает, что это основная связь
     private List<NoteFile> files = new ArrayList<>();
 

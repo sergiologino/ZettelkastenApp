@@ -5,6 +5,7 @@ import com.example.noteapp.integration.IntegrationException;
 import com.example.noteapp.integration.IntegrationService;
 import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.model.*;
+import com.example.noteapp.repository.NoteAudioRepository;
 import com.example.noteapp.repository.NoteRepository;
 import com.example.noteapp.repository.OpenGraphDataRepository;
 import com.example.noteapp.repository.UserRepository;
@@ -12,8 +13,6 @@ import com.example.noteapp.utils.SecurityUtils;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -63,9 +62,12 @@ public class NoteService {
     private final String filePath = "${file.storage-path}";
     private final String audioFilePath = "${audio.storage-path}";
     private final UserRepository userRepository;
+    private final NoteAudioRepository noteAudioRepository;
+    private final NoteFileRepository noteFileRepository;
 
 
-    public NoteService(NoteRepository noteRepository, NoteConverter noteConverter, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, OpenGraphDataRepository openGraphDataRepository, UserRepository userRepository) {
+    public NoteService(NoteRepository noteRepository, NoteConverter noteConverter, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, OpenGraphDataRepository openGraphDataRepository, UserRepository userRepository, NoteAudioRepository noteAudioRepository,
+                       NoteFileRepository noteFileRepository) {
 
         this.noteRepository = noteRepository;
         this.noteConverter = noteConverter;
@@ -73,10 +75,10 @@ public class NoteService {
         this.integrationService = integrationService;
         this.telegramService = telegramService;
         this.projectService = projectService;
-       // this.noteConverter = noteConverter;
         this.openGraphDataRepository = openGraphDataRepository;
-//        this.noteConverter = noteConverter;
         this.userRepository = userRepository;
+        this.noteAudioRepository = noteAudioRepository;
+        this.noteFileRepository = noteFileRepository;
     }
 
     public UUID getCurrentUserId() {
@@ -94,28 +96,32 @@ public class NoteService {
                 .orElseThrow(() -> new EntityNotFoundException("Note not found with id: " + id));
 
         // Формируем полный URL для аудиофайлов
-        note.getAudios().forEach(audio -> {
-            audio.setUrl(generateFullAudioUrl(request, audio.getAudioFilePath()));
-            System.out.println("current audiofileName: "+audio.getAudioFileName());
-            System.out.println("current filePath: "+audio.getAudioFilePath());
-            System.out.println("set URL for File: "+audio.getUrl());
-        });
-
-        // Формируем полный URL для файлов
-        note.getFiles().forEach(file -> {
-            file.setUrl(generateFullFileUrl(request, file.getFilePath()));
-            System.out.println("current fileName: "+file.getFileName());
-            System.out.println("current filePath: "+file.getFilePath());
-            System.out.println("set URL for File: "+file.getUrl());
-        });
-
+        if (request != null) {
+            note.getAudios().forEach(audio -> {
+                audio.setUrl(generateFullAudioUrl(request, audio.getAudioFilePath()));
+            });
+            note.getFiles().forEach(file -> {
+                file.setUrl(generateFullFileUrl(request, file.getFilePath()));
+            });
+        } else {
+            note.getAudios().forEach(audio -> {
+                audio.setUrl("/api/notes/download/audio/" + audio.getAudioFileName());
+            });
+            note.getFiles().forEach(file -> {
+                file.setUrl("/api/notes/download/file/" + file.getFileName());
+            });
+        }
         return note;
     }
 
     // Сохранить новую заметку
-    public Note saveNote(Note note) {
-        UUID userId = getCurrentUserId();
-        User user =userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
+    public Note saveNote(Note note, UUID userId) {
+        if (userId==null){
+            userId = getCurrentUserId();
+        };
+
+        UUID finalUserId = userId;
+        User user =userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found with id: " + finalUserId));
         note.setUser(user);
         return noteRepository.save(note);
     }
@@ -293,17 +299,19 @@ public class NoteService {
                 openGraphDataRepository.saveAll(existingData);
             }
         }
+
         if (note.getFiles() != null) {
             for (NoteFile file : note.getFiles()) {
                 if (file.getNote() == null) {
-                    System.out.println("Файл " + file.getFileName() + " не привязан к заметке!");
+                    file.setNote(note); // Убедимся, что файлы привязаны
                 }
-                file.setNote(note); // Убедимся, что файлы привязаны
             }
         }
         if (note.getAudios() != null) {
             for (NoteAudio audio : note.getAudios()) {
-                audio.setNote(note); // Убедимся, что файлы привязаны
+                if (audio.getNote() == null) {
+                    audio.setNote(note); // Убедимся, что файлы привязаны
+                }
             }
         }
 
@@ -318,18 +326,27 @@ public class NoteService {
 
 
     @Transactional
-    public Note createNote(Note note, List<String> links){
+    public Note createNote(Note note, List<String> links, UUID userId) {
 
-        UUID userId = getCurrentUserId();
+        if (userId==null){
+            userId = getCurrentUserId();
+        };
+
+        UUID finalUserId = userId;
+        User user =userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found with id: " + finalUserId));
+        note.setUser(user);
+
+
 //
         if (note.getProject() == null) {
             // Назначаем проект по умолчанию, если не указан
-            Project defaultProject = projectService.getDefaultProjectForUser(userId);
+            Project defaultProject = projectService.getDefaultProjectForUser();
             note.setProject(defaultProject);
         }
+        if (note.getContent() == null) {
             note.setContent("Проект по умолчанию, " + System.lineSeparator() + note.getContent());
-            User user=userRepository.findById(userId).orElseThrow();
-            note.setUser(user);
+        }
+
 
         // ✅ Сначала сохраняем заметку, чтобы Hibernate знал её ID
         if (note.getPositionX() == null) {
@@ -338,6 +355,9 @@ public class NoteService {
         if (note.getPositionY() == null) {
             note.setPositionY(100L);
         }
+        note.setCreatedAt(LocalDateTime.now());
+        note.setChangedAt(LocalDateTime.now());
+
 //}
         Note savedNote = noteRepository.save(note);
 
@@ -372,10 +392,23 @@ public class NoteService {
 
             }
 
-
             System.out.println("OpenGraphData после обработки: " + note.getOpenGraphData());
+
 //            return noteRepository.save(note);
 
+        }
+        if (note.getFiles() != null) {
+            for (NoteFile file : note.getFiles()) {
+                file.setNote(savedNote); // ✅ Привязываем к заметке
+                noteFileRepository.save(file);
+            }
+        }
+
+        if (note.getAudios() != null) {
+            for (NoteAudio audio : note.getAudios()) {
+                audio.setNote(savedNote); // ✅ Привязываем к заметке
+                noteAudioRepository.save(audio);
+            }
         }
 //        noteRepository.save(savedNote);
         return savedNote;
@@ -574,14 +607,14 @@ public class NoteService {
             note.getAudios().forEach(audio -> {
 //                audio.setUrl(generateFullAudioUrl(request, audio.getAudioFilePath()));
                 audio.setUrl("/api/notes/download/audio/" + audio.getAudioFileName());
-                System.out.println("audio URL: " + audio.getUrl());
+//                System.out.println("audio URL: " + audio.getUrl());
 
             });
 
             note.getFiles().forEach(file -> {
 //                file.setUrl(generateFullFileUrl(request, file.getUrl()));
                 file.setUrl("/api/notes/download/file/" + file.getFileName()); // Генерация ссылки для скачивания
-                System.out.println("file URL: " + file.getUrl());
+//                System.out.println("file URL: " + file.getUrl());
             });
         }
         return foundedNotes;
@@ -593,87 +626,55 @@ public class NoteService {
     }
 
     @Transactional
-    public Note addFilesToNote(UUID noteId, List<MultipartFile> files) {
+    public synchronized Note addFilesToNote(UUID noteId, List<MultipartFile> files) {
         Note note = noteRepository.findById(noteId).orElseThrow(() -> new RuntimeException("Note not found"));
 
-        if (files.isEmpty()) {
+        if (files == null || files.isEmpty()) {
             System.out.println("Нет файлов для загрузки, удаляем все существующие файлы.");
+            List<NoteFile> filesToRemove = new ArrayList<>(note.getFiles());
             note.getFiles().clear();
+            noteFileRepository.deleteAll(filesToRemove); // Явно удаляем файлы из базы
             return noteRepository.save(note);
         }
 
         String publicPath = "/files/files/";
 
         // Получаем уже существующие файлы у заметки
-        List<NoteFile> existingFiles = new ArrayList<>(note.getFiles());
         Set<String> newFileNames = files.stream()
                 .map(file -> StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename())))
                 .collect(Collectors.toSet());
 
-        // Удаляем файлы, которых нет в переданном списке
-        List<NoteFile> filesToRemove = existingFiles.stream()
+        List<NoteFile> filesToRemove = note.getFiles().stream()
                 .filter(existingFile -> !newFileNames.contains(existingFile.getFileName()))
                 .collect(Collectors.toList());
 
-        if (!filesToRemove.isEmpty()) {
-            System.out.println("Удаляем файлы: " + filesToRemove.stream().map(NoteFile::getFileName).toList());
-            note.getFiles().removeAll(filesToRemove);
-        }
+        // Удаляем файлы, которых нет в переданном списке
+        note.getFiles().removeAll(filesToRemove);
+        noteFileRepository.deleteAll(filesToRemove); // Удаляем файлы из базы
+
 
         for (MultipartFile file : files) {
             try {
-                // TODO временно дляч теста ставлю абсолютный путь
-                String uploadDir = "E:/uploaded/uploaded-files/";
-                Path uploadPath = Paths.get(uploadDir);
-
+                Path uploadPath = Paths.get("E:/uploaded/uploaded-files/");
                 if (!Files.exists(uploadPath)) {
                     Files.createDirectories(uploadPath);
                 }
 
-                // Уникальное имя файла
                 String originalFileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
                 String uniqueFileName = noteId + "_" + originalFileName;
-
-                // Проверяем, есть ли уже файл с таким именем у этой заметки
-                boolean fileExists = existingFiles.stream()
-                        .anyMatch(existingFile -> existingFile.getFileName().equals(originalFileName));
-
-                if (fileExists) {
-                    System.out.println("Файл уже существует и не будет загружен повторно: " + originalFileName);
-                    continue; // Пропускаем загрузку
-                }
-
-
                 Path filePath = uploadPath.resolve(uniqueFileName);
-//                Files.copy(file.getInputStream(), filePath);
-
-                System.out.println("Оригинальное имя файла: " + file.getOriginalFilename());
-                System.out.println("Директория загрузки: " + uploadDir);
-                System.out.println("Уникальное имя файла: " + uniqueFileName);
-
-
-
-                Files.copy(file.getInputStream(), Paths.get(filePath.toUri()),StandardCopyOption.REPLACE_EXISTING);
-
+                Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
                 NoteFile newNoteFile = new NoteFile();
                 newNoteFile.setFileName(originalFileName);
-                newNoteFile.setFilePath(uploadPath + uniqueFileName);
+                newNoteFile.setFilePath(uploadPath + "/" + uniqueFileName);
                 newNoteFile.setUrl(publicPath + uniqueFileName);
                 newNoteFile.setNote(note);
-                newNoteFile.setCreatedAt(LocalDateTime.now());
                 newNoteFile.setUserId(note.getUser().getId());
+                newNoteFile.setCreatedAt(LocalDateTime.now());
 
-                if (note.getFiles() == null) {
-                    note.setFiles(new ArrayList<>());
-                }
-
+                noteFileRepository.save(newNoteFile);
                 note.getFiles().add(newNoteFile);
-
-                noteRepository.save(note);
-
-
-
             } catch (IOException e) {
                 throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
             }
@@ -683,89 +684,60 @@ public class NoteService {
     }
 
     @Transactional
-    public Note addAudiosToNote(UUID noteId, List<MultipartFile> audios) {
-        System.out.println("Добавляем аудио в заметку (addAudiosToNote)");
+    public synchronized Note addAudiosToNote(UUID noteId, List<MultipartFile> audios) {
         Note note = noteRepository.findById(noteId).orElseThrow(() -> new RuntimeException("Note not found"));
 
-        if (audios.isEmpty()) {
+        if (audios == null || audios.isEmpty()) {
             System.out.println("Нет аудиофайлов для загрузки, удаляем все существующие аудиофайлы.");
+            List<NoteAudio> audiosToRemove = new ArrayList<>(note.getAudios());
             note.getAudios().clear();
+            noteAudioRepository.deleteAll(audiosToRemove); // Удаляем аудиофайлы
             return noteRepository.save(note);
         }
 
         String publicPath = "/files/audio/";
 
         // Получаем уже существующие аудиофайлы у заметки
-        List<NoteAudio> existingAudios = new ArrayList<>(note.getAudios());
         Set<String> newAudioNames = audios.stream()
                 .map(audio -> StringUtils.cleanPath(Objects.requireNonNull(audio.getOriginalFilename())))
                 .collect(Collectors.toSet());
 
-        // Удаляем аудиофайлы, которых нет в переданном списке
-        List<NoteAudio> audiosToRemove = existingAudios.stream()
+        // Удаляем аудиофайлы
+        List<NoteAudio> audiosToRemove = note.getAudios().stream()
                 .filter(existingAudio -> !newAudioNames.contains(existingAudio.getAudioFileName()))
                 .collect(Collectors.toList());
 
-        if (!audiosToRemove.isEmpty()) {
-            System.out.println("Удаляем аудиофайлы: " + audiosToRemove.stream().map(NoteAudio::getAudioFileName).toList());
-            note.getAudios().removeAll(audiosToRemove);
-        }
+        note.getAudios().removeAll(audiosToRemove);
+        noteAudioRepository.deleteAll(audiosToRemove); // Удаляем аудиофайлы
+
 
         for (MultipartFile audio : audios) {
             try {
-                // TODO временно для теста ставлю абсолютный путь
-                String uploadDir = "E:/uploaded/uploaded-audio/";
-                //String uploadDir = audioStoragePath;
-                Path uploadPath = Paths.get(uploadDir);
-
+                Path uploadPath = Paths.get("E:/uploaded/uploaded-audio/");
                 if (!Files.exists(uploadPath)) {
                     Files.createDirectories(uploadPath);
                 }
 
                 String originalFileName = StringUtils.cleanPath(Objects.requireNonNull(audio.getOriginalFilename()));
-
-                // Проверяем, есть ли уже аудиофайл с таким именем у этой заметки
-                boolean audioExists = existingAudios.stream()
-                        .anyMatch(existingAudio -> existingAudio.getAudioFileName().equals(originalFileName));
-
-                if (audioExists) {
-                    System.out.println("Аудиофайл уже существует и не будет загружен повторно: " + originalFileName);
-                    continue; // Пропускаем загрузку
-                }
-                // Извлекаем contentType и определяем расширение
-                String contentType = audio.getContentType();
-                String extension = (contentType != null && contentType.startsWith("audio/"))
-                        ? contentType.substring("audio/".length())
-                        : "unknown";
-
-                //String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName  + "." + extension;
-                String uniqueFileName = noteId+"_"+originalFileName; //  + "." + extension;
-
+                String uniqueFileName = noteId + "_" + originalFileName;
                 Path filePath = uploadPath.resolve(uniqueFileName);
+                Files.copy(audio.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-                Files.copy(audio.getInputStream(), Paths.get(filePath.toUri()), StandardCopyOption.REPLACE_EXISTING);
+                NoteAudio newNoteAudio = new NoteAudio();
+                newNoteAudio.setAudioFileName(originalFileName);
+                newNoteAudio.setAudioFilePath(uploadPath + "/" + uniqueFileName);
+                newNoteAudio.setNote(note);
+                newNoteAudio.setUserId(note.getUser().getId());
+                newNoteAudio.setCreatedAt(LocalDateTime.now());
 
+                noteAudioRepository.save(newNoteAudio);
+                note.getAudios().add(newNoteAudio);
 
-                NoteAudio newNoteAudioFile = new NoteAudio();
-                newNoteAudioFile.setAudioFileName(uniqueFileName);
-                newNoteAudioFile.setAudioFilePath(publicPath + uniqueFileName);
-                newNoteAudioFile.setNote(note);
-                newNoteAudioFile.setUserId(note.getUser().getId());
-                newNoteAudioFile.setCreatedAt(LocalDateTime.now());
-
-                if (note.getAudios() == null) {
-                    note.setAudios(new ArrayList<>());
-                }
-                note.getAudios().add(newNoteAudioFile);
-
-                noteRepository.save(note);
-
-
-//
             } catch (IOException e) {
-                throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
+                throw new RuntimeException("Ошибка при загрузке аудиофайла: " + e.getMessage(), e);
             }
         }
+
         note.setChangedAt(LocalDateTime.now());
         return noteRepository.save(note);
     }
@@ -877,9 +849,18 @@ public class NoteService {
     public List<Tag> getTagsByNoteId(UUID noteId) { return noteRepository.findTagsByNoteId(noteId); }
 
     public List<Tag> getTagsByName(List<String> tags) {
+        UUID userId = getCurrentUserId();
         List<Tag> tagList = new ArrayList<>();
         for (String tagName : tags) {
             Tag tag = tagService.findOrCreateTag(tagName, false);
+            tagList.add(tag);
+        }
+        return tagList;
+    }
+    public List<Tag> getTagsByNameForBot(List<String> tags, UUID userId) {
+        List<Tag> tagList = new ArrayList<>();
+        for (String tagName : tags) {
+            Tag tag = tagService.findOrCreateTagForBot(tagName, false, userId);
             tagList.add(tag);
         }
         return tagList;

@@ -89,13 +89,13 @@ logging:
   level:
     org:
       springframework:
-        web: DEBUG
-        security: DEBUG
+        web: ERROR
+        security: ERROR
         hibernate: ERROR
       apache:
-        tomcat: DEBUG
+        tomcat: ERROR
       hibernate:
-        SQL: DEBUG
+        SQL: ERROR
         type:
           descriptor:
             sql:

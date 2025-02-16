@@ -2,7 +2,11 @@ package com.example.noteapp.bot;
 
 import com.example.noteapp.model.User;
 import com.example.noteapp.repository.UserRepository;
+import com.example.noteapp.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -35,7 +39,18 @@ public class NoteBot extends TelegramLongPollingBot {
         this.botUsername = botUsername;
     }
 
+    public UUID getCurrentUserId(String username) {
+        Optional<User> currentUser=userRepository.findByTlgUsername(username.replace("@", ""));
+        if(currentUser.isPresent()) {
+            return currentUser.get().getId();
+        }
+        return null;
+    }
 
+
+//    public User getCurrentUser() {
+//
+//    }
     @Override
     public String getBotUsername() {
         return botUsername;
@@ -58,7 +73,7 @@ public class NoteBot extends TelegramLongPollingBot {
             Optional<User> userOptional = userRepository.findByTlgUsername(username.replace("@", ""));
 
             if (userOptional.isEmpty()) {
-                sendResponse(chatId, "Ошибка: Ваш Telegram-аккаунт не привязан к системе.");
+                sendResponse(chatId, "Ошибка: Ваш Telegram-аккаунт не привязан к системе. Укажите в профиле в поле 'Telegram username' имя пользователя из telegram ");
                 return;
             }
 
@@ -75,19 +90,23 @@ public class NoteBot extends TelegramLongPollingBot {
             // Проверяем тип сообщения
             // TODO Animation потом поменять на Text
             if (text != null && (message.hasPhoto() || text.contains("http"))) {
-                handleMixedMessage(message, user.getId());
+                handleMixedMessage(message, user);
             } else if (message.hasAnimation()) {
                 handleTextMessage(message);
             } else if (message.hasDocument()) {
-                handleDocumentMessage(message);
+                handleDocumentMessage(message, user);
+//                handleMixedMessage(message, user);
             } else if (message.hasVoice()) {
-                handleVoiceMessage(message);
+                handleVoiceMessage(message, user);
+//                handleMixedMessage(message, user);
             } else if (message.hasText()) {
-                handleIncomingMessage(message);
+                handleIncomingMessage(message, user);
+//                handleMixedMessage(message, user);
             } else if (message.hasPhoto()) {
-                handlePhotoMessage(message, user.getId());
+                handlePhotoMessage(message, user);
+//                handleMixedMessage(message, user);
             } else {
-                sendResponse(message.getChatId().toString(), "Неизвестный тип сообщения. Поддерживаются текст, документы и голосовые сообщения.");
+                sendResponse(message.getChatId().toString(), "Неизвестный тип сообщения. Поддерживаются текст, документы, ссылки и голосовые сообщения.");
             }
         }
     }
@@ -95,12 +114,12 @@ public class NoteBot extends TelegramLongPollingBot {
     // Обработка смешанного сообщения
 
     //TODO USERID
-    private void handleMixedMessage(Message message, UUID userId) { // UserId
+    private void handleMixedMessage(Message message, User user) { // UserId
         String chatId = message.getChatId().toString();
         String text = message.getText();
         String photoUrl = null;
-
         String response =null;
+        System.out.println("Начинаем обработку смешанного сообщения");
 
         if (message.hasPhoto()) {
             try {
@@ -110,6 +129,7 @@ public class NoteBot extends TelegramLongPollingBot {
                 sendResponse(chatId, "Ошибка при получении изображения: " + e.getMessage());
             }
         }
+
 
 
         String link = null; // Хранит найденную ссылку
@@ -126,13 +146,16 @@ public class NoteBot extends TelegramLongPollingBot {
         }
 
         // Если ссылка не найдена, возвращаем сообщение об ошибке
-        if (link == null) {
-            sendResponse(chatId, "Ошибка: В сообщении отсутствует ссылка.");
+        if (link == null && (text == null || text.trim().isEmpty())) {
+            sendResponse(chatId, "Ошибка: Сообщение пустое или не содержит ссылки.");
             return;
         }
 
         // Формируем описание
         String comment = commentBuilder.toString().trim();
+        if (comment.isEmpty()){
+            comment="Без контекста";
+        }
 
         System.out.println("Отправляем на создание заметки на бэке: " + link);
         System.out.println("comment: " + comment);
@@ -140,19 +163,20 @@ public class NoteBot extends TelegramLongPollingBot {
         System.out.println("photoUrl: " + photoUrl);
 
 
-        String result = sendMixedNoteToBackend(comment, link, photoUrl, userId); //userId
-        response="Смешанное сообщение обработано: ";
+        String result = sendMixedNoteToBackend(comment, link, photoUrl, user); //userId
+
+        response="Смешанное сообщение обработано ";//+result;
 
         sendResponse(chatId, response);
     }
 
     // Обработка фото
-    private void handlePhotoMessage(Message message, UUID userId) {
+    private void handlePhotoMessage(Message message, User user) {
         String chatId = message.getChatId().toString();
         try {
             String fileId = message.getPhoto().get(message.getPhoto().size() - 1).getFileId();
             String photoUrl = getFileUrl(fileId);
-            String response = sendMixedNoteToBackend(null, null, photoUrl, userId);
+            String response = sendMixedNoteToBackend(null, null, photoUrl, user);
             sendResponse(chatId, response);
         } catch (Exception e) {
             sendResponse(chatId, "Ошибка при обработке изображения: " + e.getMessage());
@@ -161,14 +185,14 @@ public class NoteBot extends TelegramLongPollingBot {
 
 
     // Обработка документов
-    private void handleDocumentMessage(Message message) {
+    private void handleDocumentMessage(Message message, User user) {
         String chatId = message.getChatId().toString();
         try {
             String fileId = message.getDocument().getFileId();
             String fileName = message.getDocument().getFileName();
 
             String fileUrl = getFileUrl(fileId);
-            String result = sendNoteToBackend(null, fileUrl, fileName);
+            String result = sendNoteToBackend(null, fileUrl, fileName, user);
             sendResponse(chatId, result);
         } catch (Exception e) {
             sendResponse(chatId, "Ошибка при обработке документа: " + e.getMessage());
@@ -176,13 +200,13 @@ public class NoteBot extends TelegramLongPollingBot {
     }
 
     // Обработка голосовых сообщений
-    private void handleVoiceMessage(Message message) {
+    private void handleVoiceMessage(Message message, User user) {
         String chatId = message.getChatId().toString();
         try {
             String fileId = message.getVoice().getFileId();
             String fileUrl = getFileUrl(fileId);
 
-            String result = sendNoteToBackend(null, fileUrl, "voice.ogg");
+            String result = sendNoteToBackend(null, fileUrl, "voice.ogg", user);
             sendResponse(chatId, result);
         } catch (Exception e) {
             sendResponse(chatId, "Ошибка при обработке голосового сообщения: " + e.getMessage());
@@ -202,31 +226,32 @@ public class NoteBot extends TelegramLongPollingBot {
         }
     }
 
-    private void handleIncomingMessage(Message message) {
+    private void handleIncomingMessage(Message message, User user) {
         String chatId = message.getChatId().toString();
         String userMessage = message.getText();
 
         String response;
-        if (userMessage.equalsIgnoreCase("/start")) {
-            response = "Добро пожаловать! Используйте команды:\n" +
-                    "/addnote {текст} - создать заметку\n" +
-                    "/help - список команд";
-        } else if (userMessage.startsWith("/addnote ")) {
-            String noteContent = userMessage.substring(9).trim();
-            if (noteContent.isEmpty()) {
-                response = "Ошибка: текст заметки не может быть пустым.";
-            } else {
-                // Отправка заметки на сервер
-                String result = sendNoteToBackend(noteContent, null, null);
-                response = "Заметка добавлена: " + result;
-            }
-        } else if (userMessage.equalsIgnoreCase("/help")) {
-            response = "Доступные команды:\n" +
-                    "/addnote {текст} - добавить новую заметку\n" +
-                    "/help - показать команды";
-        } else {
-            response = "Неизвестная команда. Используйте /help для списка команд.";
-        }
+//        if (userMessage.equalsIgnoreCase("/start")) {
+//            response = "Добро пожаловать! Используйте команды:\n" +
+//                    "/addnote {текст} - создать заметку\n" +
+//                    "/help - список команд";
+//        } else if (userMessage.startsWith("/addnote ")) {
+//            String title = userMessage.substring(6).trim();
+            String noteContent = userMessage.substring(6).trim();
+//            if (noteContent.isEmpty()) {
+//                response = "Ошибка: текст заметки не может быть пустым.";
+//            } else {
+//                // Отправка заметки на сервер
+                String result = sendNoteToBackend(noteContent, null, null, user);
+                response = "Заметка добавлена ";// + result;
+//            }
+//        } else if (userMessage.equalsIgnoreCase("/help")) {
+//            response = "Доступные команды:\n" +
+//                    "/addnote {текст} - добавить новую заметку\n" +
+//                    "/help - показать команды";
+//        } else {
+//            response = "Неизвестная команда. Используйте /help для списка команд.";
+//        }
 
         sendResponse(chatId, response);
     }
@@ -245,7 +270,8 @@ public class NoteBot extends TelegramLongPollingBot {
 
     // Отправка данных на бэкенд
     //TODO подставить проект по умолчанию, сделать URL не в коде, а в конфиге
-    private String sendNoteToBackend(String content, String fileUrl, String fileName) {
+    private String sendNoteToBackend(String content, String fileUrl, String fileName, User user) {
+        UUID userId = user.getId();
         try {
             RestTemplate restTemplate = new RestTemplate();
             Map<String, Object> requestBody = new HashMap<>();
@@ -254,11 +280,12 @@ public class NoteBot extends TelegramLongPollingBot {
             List<String> tags = new ArrayList<>();
             tags.add("telegram");
             requestBody.put("tags", tags);
-            requestBody.put("username", botUsername);
+            requestBody.put("userId", userId.toString());
+
 
 
             ResponseEntity<String> response = restTemplate.postForEntity(
-                    "http://localhost:8080/api/notes/5c4a3ca8-d911-4ee4-94d6-3386239f8c04", requestBody, String.class
+                    "http://localhost:8080/api/notes/text", requestBody, String.class
             );
             return response.getBody();
         } catch (Exception e) {
@@ -267,7 +294,8 @@ public class NoteBot extends TelegramLongPollingBot {
         }
     }
 //  TODO USERID
-    private String sendMixedNoteToBackend(String content, String url, String photoUrl, UUID userId) {
+    private String sendMixedNoteToBackend(String content, String url, String photoUrl, User user) {
+//        UUID userId = getCurrentUserId();
         try {
             RestTemplate restTemplate = new RestTemplate();
             Map<String, Object> requestBody = new HashMap<>();
@@ -275,9 +303,17 @@ public class NoteBot extends TelegramLongPollingBot {
             if (url != null) requestBody.put("url", url);
             if (photoUrl != null) requestBody.put("photoUrl", photoUrl);
             requestBody.put("fromTelegram", true);
+            requestBody.put("userId", user.getId().toString());
+
+//            HttpHeaders headers = new HttpHeaders();
+//            headers.set("Content-Type", "application/json");
+//
+//            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
 
             ResponseEntity<String> response = restTemplate.postForEntity(
-                    "http://localhost:8080/api/notes/mixed", requestBody, String.class
+                    "http://localhost:8080/api/notes/mixed",
+                    requestBody,
+                    String.class
             );
             return response.getBody();
         } catch (Exception e) {
@@ -285,6 +321,10 @@ public class NoteBot extends TelegramLongPollingBot {
             return "Ошибка при отправке смешанного сообщения: " + e.getMessage();
         }
     }
+
+//    private String getAuthToken() {
+//        return null;
+//    }
 
 
     private void sendResponse(String chatId, String response) {
@@ -299,6 +339,7 @@ public class NoteBot extends TelegramLongPollingBot {
     }
 
     private void analyzeNoteInBackend(String noteId, String chatId) {
+
         try {
             RestTemplate restTemplate = new RestTemplate();
             restTemplate.postForEntity(

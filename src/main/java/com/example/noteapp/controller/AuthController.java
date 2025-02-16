@@ -186,7 +186,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Пользователь уже существует.");
         }
         String hashedPassword = passwordEncoder.encode(userDTO.getPassword());
-        System.out.println("Хешированный пароль: " + hashedPassword);
+//        System.out.println("Хешированный пароль: " + hashedPassword);
 
         // ✅ Сначала вызываем `syncUser()`, но НЕ сохраняем пользователя!
         User user = new User();
@@ -230,7 +230,7 @@ public class AuthController {
 
             // ✅ Создаём проект "Главное" для пользователя
             Project defaultProject = new Project();
-            defaultProject.setName("Главное");
+            defaultProject.setName("Мой проект");
             defaultProject.setDescription("Проект по умолчанию");
             defaultProject.setColor("#BD10E0");
             defaultProject.setPosition(1);

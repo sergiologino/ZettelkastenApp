@@ -26,7 +26,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String requestURI = request.getRequestURI();
-        System.out.println("Запрос: " + requestURI);
+//        System.out.println("Запрос: " + requestURI);
 
         // Разрешить запросы без токена для регистрации и логина
         String authHeader = null; // 💡 ГАРАНТИРОВАННО ОБЪЯВЛЯЕМ ЗАРАНЕЕ
@@ -43,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7); // 💡 Извлекаем токен из заголовка
             username = jwtTokenProvider.getUsernameFromToken(token); // 💡 Получаем username из токена
-            System.out.println("username: " + username);
+//            System.out.println("username: " + username);
         }
 
         if (token != null && username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -52,9 +52,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (jwtTokenProvider.validateToken(token, userDetails)) {
                 var authentication = jwtTokenProvider.getAuthentication(token, userDetails);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                System.out.println("Пользователь " + username + " успешно аутентифицирован");
+//                System.out.println("Пользователь " + username + " успешно аутентифицирован");
             } else {
-                System.out.println("Ошибка: токен невалидный");
+//                System.out.println("Ошибка: токен невалидный");
                 SecurityContextHolder.getContext().setAuthentication(null);
             }
         }
@@ -62,7 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (requestURI.startsWith("/api/auth/register") ||
                 requestURI.startsWith("/api/auth/login") ||
                 requestURI.startsWith("/api/auth/sync")) {
-            System.out.println("Передаем управление следующему фильтру");
+//            System.out.println("Передаем управление следующему фильтру");
             chain.doFilter(request, response);
             return;
         }
