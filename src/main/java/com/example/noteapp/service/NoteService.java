@@ -12,6 +12,7 @@ import com.example.noteapp.repository.UserRepository;
 import com.example.noteapp.utils.SecurityUtils;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -440,30 +441,45 @@ public class NoteService {
 
 
     public OpenGraphData fetchOpenGraphData(String url, Note note) {
-
         try {
-            // Проверяем, является ли URL корректным
+            // Проверяем валидность URL
             if (!isValidUrl(url)) {
                 throw new IllegalArgumentException("Некорректный URL: " + url);
             }
+
             System.out.println("Загрузка OpenGraph данных для: " + url);
 
+            // Устанавливаем SSL-свойства (если сайт использует самоподписанный сертификат)
+            System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,TLSv1");
+            System.setProperty("javax.net.ssl.trustStoreType", "JKS");
+
+            // Загружаем страницу с доп. заголовками
             Document document = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                    .header("Accept-Language", "en-US,en;q=0.9")
+                    .header("Referer", "https://www.google.com/")
+                    .ignoreHttpErrors(true) // Игнорируем ошибки HTTP (403, 500)
+                    .timeout(10000) // Увеличиваем таймаут (10 секунд)
                     .get();
+
+            // Извлекаем OpenGraph данные
             OpenGraphData ogData = new OpenGraphData();
             ogData.setUrl(url);
             ogData.setTitle(getMetaTagContent(document, "og:title"));
+            if (ogData.getTitle().isEmpty()) {
+                ogData.setTitle(ogData.getUrl().toString()); // Используем title, если OpenGraph теги отсутствуют
+            }
             ogData.setDescription(getMetaTagContent(document, "og:description"));
             ogData.setImage(getMetaTagContent(document, "og:image"));
             ogData.setNote(note);
             ogData.setUserId(note.getUser().getId());
+
             System.out.println("Успешно загружены OpenGraph данные: " + ogData.getTitle());
+
             return ogData;
         } catch (IOException e) {
-            System.err.println("Ошибка при обработке Open Graph: " + url);
-            e.printStackTrace(); // Добавлено для отладки
-            return null;
+            System.err.println("Ошибка при загрузке OpenGraph данных: " + e.getMessage());
+            return null; // Возвращаем null при ошибке
         }
     }
 
@@ -496,7 +512,13 @@ public class NoteService {
         }
     }
 
-    // Метод для проверки валидности URL
+    // Вспомогательный метод для извлечения содержимого метатегов
+    private String getMetaTagContent(Document doc, String property) {
+        Element metaTag = doc.select("meta[property=" + property + "]").first();
+        return metaTag != null ? metaTag.attr("content") : "";
+    }
+
+    // Метод для проверки корректности URL
     private boolean isValidUrl(String url) {
         try {
             new URL(url); // Проверяем, можно ли создать объект URL
@@ -504,11 +526,6 @@ public class NoteService {
         } catch (MalformedURLException e) {
             return false; // Если URL некорректен
         }
-    }
-
-
-    private String getMetaTagContent(Document document, String metaName) {
-        return document.select("meta[property=" + metaName + "]").attr("content");
     }
 
     @Transactional
@@ -752,6 +769,20 @@ public class NoteService {
     }
 
     public String downloadFile(String fileUrl, String storagePath, String fileName) {
+        try {
+            Path storageDirectory = Paths.get(storagePath);
+            if (!Files.exists(storageDirectory)) {
+                Files.createDirectories(storageDirectory);
+            }
+            Path destinationPath = storageDirectory.resolve(fileName);
+            Files.copy(new URL(fileUrl).openStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
+            return destinationPath.toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Ошибка при загрузке файла: " + e.getMessage(), e);
+        }
+    }
+    public String downloadFileFromBot(String fileUrl, String storagePath, String fileName) {
+        System.out.println("Begin processing downloadFileFromBot");
         try {
             Path storageDirectory = Paths.get(storagePath);
             if (!Files.exists(storageDirectory)) {

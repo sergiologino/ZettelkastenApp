@@ -89,17 +89,16 @@ logging:
   level:
     org:
       springframework:
-        web: ERROR
-        security: ERROR
-        hibernate: ERROR
+        web: info
+        hibernate: info
       apache:
-        tomcat: ERROR
+        tomcat: info
       hibernate:
-        SQL: ERROR
+        SQL: info
         type:
           descriptor:
             sql:
-              BasicBinder: TRACE
+              BasicBinder: info
 file:
   storage-path: /Users/savki/uploaded/uploaded-files
 audio:

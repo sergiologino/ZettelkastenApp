@@ -5,6 +5,7 @@ import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.dto.NoteFileDTO;
 import com.example.noteapp.dto.OpenGraphRequest;
 import com.example.noteapp.mapper.NoteConverter;
+import com.example.noteapp.mapper.NoteFileConverter;
 import com.example.noteapp.model.*;
 import com.example.noteapp.repository.NoteAudioRepository;
 import com.example.noteapp.repository.UserRepository;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
+import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -50,9 +52,10 @@ public class NoteController {
     private final UserRepository userRepository;
     private final NoteFileRepository noteFileRepository;
     private final NoteAudioRepository noteAudioRepository;
+    private final NoteFileConverter noteFileConverter;
 
 
-    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter, TagService tagService, UserRepository userRepository, NoteFileRepository noteFileRepository, NoteAudioRepository noteAudioRepository) {
+    public NoteController(NoteService noteService, ProjectService projectService, NoteConverter noteConverter, TagService tagService, UserRepository userRepository, NoteFileRepository noteFileRepository, NoteAudioRepository noteAudioRepository, NoteFileConverter noteFileConverter) {
         this.noteService = noteService;
         this.projectService = projectService;
         this.noteConverter = noteConverter;
@@ -60,6 +63,7 @@ public class NoteController {
         this.userRepository = userRepository;
         this.noteFileRepository = noteFileRepository;
         this.noteAudioRepository = noteAudioRepository;
+        this.noteFileConverter = noteFileConverter;
     }
 
     public UUID getCurrentUserId() {
@@ -192,6 +196,7 @@ public class NoteController {
                             file.getFilePath(),
                             file.getCreatedAt())) // ✅ Корректный маппинг
                     .collect(Collectors.toList());
+
             List<NoteAudioDTO> newAudios = Optional.ofNullable(noteDto.getAudios())
                     .orElse(Collections.emptyList()) // ✅ Если null, подставляем пустой список
                     .stream()
@@ -237,85 +242,79 @@ public class NoteController {
             @ApiResponse(responseCode = "400", description = "Некорректные данные"),
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
-    @PostMapping("/text")
-    public ResponseEntity<?> createTextNoteFromBot(@RequestBody  Map<String, Object>  requestBody) {
-        if (requestBody.get("userId") == null) {
-            return ResponseEntity.badRequest().body("Ошибка: Не указан пользователь.");
-        }
 
-        UUID userId = UUID.fromString((String) requestBody.get("userId"));
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+    // создать смешанную заметку из телеграм
+    @PostMapping("/mixed")
+    public ResponseEntity<?> createMixedNote(@RequestBody Map<String, Object> requestBody) {
+        try {
+            UUID userId = UUID.fromString((String) requestBody.get("userId"));
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
 
-        String content = (String) requestBody.get("content");
-        String url = (String) requestBody.get("url");
-        String photoUrl = (String) requestBody.get("photoUrl");
-        Boolean fromTelegram =(Boolean) requestBody.get("fromTelegram");
+            String content = (String) requestBody.get("content");
+            List<String> links = (List<String>) requestBody.getOrDefault("openGraph", new ArrayList<>());
+            List<Map<String, Object>> audioFiles = (List<Map<String, Object>>) requestBody.getOrDefault("audios", new ArrayList<>());
+            List<Map<String, Object>> noteFiles = (List<Map<String, Object>>) requestBody.getOrDefault("files", new ArrayList<>());
 
-        NoteDTO noteDto = new NoteDTO();
+            Note note = new Note();
+            note.setId(UUID.randomUUID());
+            note.setContent(content);
+            note.setUser(user);
+            note.setCreatedAt(LocalDateTime.now());
+            note.setChangedAt(LocalDateTime.now());
 
-        noteDto.setUserId(userId);
-        noteDto.setProjectId(projectService.getDefaultBotProjectForUser(userId).getId());
-        noteDto.setCreatedAt(LocalDateTime.now());
-        noteDto.setChangedAt(LocalDateTime.now());
-        noteDto.setContent(content);
-
-        if (photoUrl != null && !photoUrl.isEmpty()) {
-            String photoPath = noteService.downloadFile(photoUrl, "photos/", UUID.randomUUID() + ".jpg");
-            noteDto.setFilePath(photoPath);
-            noteDto.setFileType("image");
-        }
-
-        if (noteDto.getTags() == null) {
-            noteDto.setTags(new ArrayList<>());
-        }
-        Tag newTag=tagService.findOrCreateTagForBot("telegram",true, userId);
-        noteDto.getTags().add(newTag.getName());
-
-        try {            // Проверяем, что поле content не пустое
-            if (noteDto.getContent() == null || noteDto.getContent().trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Текст заметки не может быть пустым.");
+            // Добавление OpenGraph ссылок
+            if (!links.isEmpty()) {
+                List<OpenGraphData> openGraphData = links.stream()
+                        .map(link -> noteService.fetchOpenGraphData(link, note))
+                        .filter(Objects::nonNull)
+                        .toList();
+                note.setOpenGraphData(openGraphData);
             }
 
-            List<NoteFileDTO> newFiles = Optional.ofNullable(noteDto.getFiles())
-                    .orElse(Collections.emptyList()) // ✅ Если null, подставляем пустой список
-                    .stream()
-                    .map(file -> new NoteFileDTO(
-                            file.getId(),
-                            file.getFileUrl(),
-                            file.getName(),
-                            file.getFilePath(),
-                            file.getCreatedAt())) // ✅ Корректный маппинг
-                    .collect(Collectors.toList());
-            List<NoteAudioDTO> newAudios = Optional.ofNullable(noteDto.getAudios())
-                    .orElse(Collections.emptyList()) // ✅ Если null, подставляем пустой список
-                    .stream()
-                    .map(audio -> new NoteAudioDTO(
-                            audio.getId(),
-                            audio.getAudioName(),
-                            audio.getUrl(),
-                            audio.getCreatedAt(),
-                            audio.getType(),
-                            audio.getSize()))
-                    .collect(Collectors.toList());
+            // Сохранение файлов
+            List<NoteFile> files = noteFiles.stream().map(data -> {
+                NoteFile file = new NoteFile();
+                file.setId(UUID.randomUUID());
+                file.setServerFilePath((String) data.get("serverFilePath"));
+                file.setOriginalName((String) data.get("originalName"));
+                file.setFileType((String) data.get("fileType"));
+                file.setUserId(userId);
+                file.setCreatedAt(LocalDateTime.now());
+                file.setNote(note);
+                return file;
+            }).toList();
+            note.setFiles(files);
 
-            //--------------------- ЗАГЛУШКИ ---------------------------
+            // Сохранение аудио
+            List<NoteAudio> audios = audioFiles.stream().map(data -> {
+                NoteAudio audio = new NoteAudio();
+                audio.setId(UUID.randomUUID());
+                audio.setServerFilePath((String) data.get("serverFilePath"));
+                audio.setOriginalName((String) data.get("originalName"));
+                audio.setAudioType((String) data.get("audioType"));
+                audio.setSize(new BigDecimal(data.get("size").toString()));
+                audio.setUserId(userId);
+                audio.setCreatedAt(LocalDateTime.now());
+                audio.setNote(note);
+                return audio;
+            }).toList();
 
-            noteDto.setNeuralNetwork("YandexGPT-Lite");
-            noteDto.setAnalyze(false);
+            note.setAudios(audios);
+            // ✅ Проверяем и назначаем проект по умолчанию
+            Project defaultProject = projectService.getDefaultBotProjectForUser(userId);
+            note.setProject(defaultProject);
 
-            List<String> newUrls = new ArrayList<>();
-            if(noteDto.getUrls()!=null || !noteDto.getUrls().isEmpty()) {
-                newUrls=noteDto.getUrls();
-            };
-            if (noteDto.getId() == null) {
-                noteDto.setId(UUID.randomUUID()); // ✅ Генерируем ID
+            // добавляем тэг - признак телеги
+
+            Tag newTag=tagService.findOrCreateTagForBot("telegram",true, userId);
+            note.getTags().add(newTag);
+            if (note.getContent().isEmpty()){
+                note.setContent("message from telegram");
             }
 
-            Note newNote = noteConverter.toEntity(noteDto);
-            Note savedNote = noteService.createNote(newNote, newUrls, userId);
-            NoteDTO newNoteDTO = noteConverter.toDTO(savedNote);
-
-            return ResponseEntity.ok(newNoteDTO);
+            noteService.saveNote(note, userId);
+            return ResponseEntity.ok("Заметка успешно создана.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Ошибка при создании заметки: " + e.getMessage());
@@ -323,98 +322,182 @@ public class NoteController {
     }
 
 
+
     // Обработка смешанных сообщений
-
-    @PostMapping({"/mixed", })
-    @Operation(
-            summary = "Создать смешанную заметку",
-            description = "Создает новую заметку с текстом, ссылками и/или изображениями. Если проект не указан, используется проект по умолчанию.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "Заметка успешно создана.",
-                            content = @Content(mediaType = "application/json")
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "Некорректные данные запроса.",
-                            content = @Content(mediaType = "application/json")
-                    ),
-                    @ApiResponse(
-                            responseCode = "500",
-                            description = "Ошибка на сервере.",
-                            content = @Content(mediaType = "application/json")
-                    )
-            }
-    )
-    public ResponseEntity<?> createMixedNote(@RequestBody Map<String, Object> requestBody) {
-        if (requestBody.get("userId") == null) {
-            return ResponseEntity.badRequest().body("Ошибка: Не указан пользователь.");
-        }
-
-        try {
-            String content = (String) requestBody.get("content");
-            String url = (String) requestBody.get("url");
-            String photoUrl = (String) requestBody.get("photoUrl");
-            Boolean fromTelegram =(Boolean) requestBody.get("fromTelegram");
-            UUID userId = UUID.fromString((String) requestBody.get("userId"));
-            User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Пользователь не найден"));
-
-            Note note = new Note();
-            note.setContent(content);
-            if (user==null) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("в NoteController не найден пользователь получатель заметки: ");
-            } else {
-                note.setUser(user);
-            }
-
-            // Добавляем OpenGraph данные
-            if (url != null && !url.isEmpty()) {
-                List<String> urls = List.of(url);
-                List<OpenGraphData> openGraphData = urls.stream()
-                        .map(link -> noteService.fetchOpenGraphData(link, note))
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toList());
-                if (openGraphData != null) {
-
-                    String title = "заголовок";
-                    String  description = "description";
-//                    String title = openGraphData.getTitle() != null ? openGraphData.getTitle() : " нет заголовка";
-//                    String description = openGraphData.getDescription() != null ? openGraphData.getDescription() : "нет описания";
-//                    note.setContent(title + "\n" + description + "\n\n" + content); // Формируем полный контент
-
-                }
-                note.setOpenGraphData(openGraphData);
-                note.setProject(projectService.getDefaultBotProjectForUser(userId));
-
-            }
-
-            // Сохраняем фото
-            if (photoUrl != null && !photoUrl.isEmpty()) {
-                String photoPath = noteService.downloadFile(photoUrl, "photos/", UUID.randomUUID() + ".jpg");
-                note.setFilePath(photoPath);
-                note.setFileType("image");
-            }
-            note.setCreatedAt(LocalDateTime.now());
-            note.setChangedAt(LocalDateTime.now());
-            // Добавляем тег "telegram"
-            if (note.getTags() == null) {
-                note.setTags(new ArrayList<>());
-            }
-            Tag newTag=tagService.findOrCreateTagForBot("telegram",true, userId);
-            note.getTags().add(newTag);
-
-
-
-
-            Note savedNote = noteService.saveNote(note, userId);
-            return ResponseEntity.ok("Заметка успешно создана с текстом, ссылкой и/или изображением.");
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Ошибка при создании смешанной заметки: " + e.getMessage());
-        }
-    }
+//    @PostMapping({"/mixed", })
+//    @Operation(
+//            summary = "Создать смешанную заметку",
+//            description = "Создает новую заметку с текстом, ссылками и/или изображениями. Если проект не указан, используется проект по умолчанию.",
+//            responses = {
+//                    @ApiResponse(
+//                            responseCode = "200",
+//                            description = "Заметка успешно создана.",
+//                            content = @Content(mediaType = "application/json")
+//                    ),
+//                    @ApiResponse(
+//                            responseCode = "400",
+//                            description = "Некорректные данные запроса.",
+//                            content = @Content(mediaType = "application/json")
+//                    ),
+//                    @ApiResponse(
+//                            responseCode = "500",
+//                            description = "Ошибка на сервере.",
+//                            content = @Content(mediaType = "application/json")
+//                    )
+//            }
+//    )
+//    public ResponseEntity<?> createMixedNote(@RequestBody Map<String, Object> requestBody) {
+//        if (requestBody.get("userId") == null) {
+//            return ResponseEntity.badRequest().body("Ошибка: Не указан пользователь.");
+//        }
+//
+//        try {
+//            String content = (String) requestBody.get("content");
+//            String url = (String) requestBody.get("url");
+//            String photoUrl = (String) requestBody.get("photoUrl");
+//            Boolean fromTelegram =(Boolean) requestBody.get("fromTelegram");
+//            UUID userId = UUID.fromString((String) requestBody.get("userId"));
+//            User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+//
+//            Note note = new Note();
+//            note.setId(UUID.randomUUID() );
+//            note.setContent(content);
+//            if (user==null) {
+//                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                        .body("в NoteController не найден пользователь получатель заметки: ");
+//            } else {
+//                note.setUser(user);
+//            }
+//
+//            // Добавляем OpenGraph данные
+//            if (url != null && !url.isEmpty()) {
+//                List<String> urls = List.of(url);
+//                List<OpenGraphData> openGraphData = urls.stream()
+//                        .map(link -> noteService.fetchOpenGraphData(link, note))
+//                        .filter(Objects::nonNull)
+//                        .collect(Collectors.toList());
+//                if (openGraphData != null) {
+//
+//                    String title = "заголовок";
+//                    String  description = "description";
+////                    String title = openGraphData.getTitle() != null ? openGraphData.getTitle() : " нет заголовка";
+////                    String description = openGraphData.getDescription() != null ? openGraphData.getDescription() : "нет описания";
+////                    note.setContent(title + "\n" + description + "\n\n" + content); // Формируем полный контент
+//
+//                }
+//                note.setOpenGraphData(openGraphData);
+//                note.setProject(projectService.getDefaultBotProjectForUser(userId));
+//
+//            }
+//
+//            // Сохраняем фото
+//            String tempPhotoPath = "";
+//            String tempFileName = UUID.randomUUID() + ".jpg";
+//
+//            note.setCreatedAt(LocalDateTime.now());
+//            note.setChangedAt(LocalDateTime.now());
+//
+//            // Добавляем тег "telegram"
+//            if (note.getTags() == null) {
+//                note.setTags(new ArrayList<>());
+//            }
+//            Tag newTag=tagService.findOrCreateTagForBot("telegram",true, userId);
+//            note.getTags().add(newTag);
+//            note.setProject(projectService.getDefaultBotProjectForUser(userId));
+////            Note savedNote = noteService.saveNote(note, userId);
+//
+//            if (photoUrl != null && !photoUrl.isEmpty()) {
+//                tempPhotoPath = noteService.downloadFileFromBot(photoUrl, "photos/", tempFileName);
+//                List<NoteFile> newFiles = new ArrayList<>();
+//
+//                NoteFile newFile = new NoteFile();
+//                newFile.setId(UUID.randomUUID());
+//                newFile.setFileUrl(tempPhotoPath);
+//                newFile.setUserId(userId);
+//                newFile.setNote(note);
+//                newFile.setFileName(tempFileName);
+//                newFile.setCreatedAt(LocalDateTime.now());
+//
+//
+//                newFiles.add(newFile);
+//
+//                note.setFilePath(tempPhotoPath);
+//                note.setFileType("image");
+//                note.setFiles(newFiles);
+//                noteService.saveNote(note, userId);
+//
+//            }
+//            Map<String, Object> response = new HashMap<>();
+//            response.put("message", "Заметка успешно создана");
+//            response.put("id", note.getId());
+//
+//            return ResponseEntity.ok("Заметка успешно создана с текстом, ссылкой и/или изображением.");
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body("Ошибка при создании смешанной заметки: " + e.getMessage());
+//        }
+//    }
+//    @PostMapping("/mixed")
+//    public ResponseEntity<?> createMixedNote(@RequestBody Map<String, Object> requestBody) {
+//        try {
+//            UUID userId = UUID.fromString((String) requestBody.get("userId"));
+//            User user = userRepository.findById(userId)
+//                    .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+//
+//            String content = (String) requestBody.get("content");
+//            List<String> links = (List<String>) requestBody.getOrDefault("openGraph", new ArrayList<>());
+//            List<String> audioUrls = (List<String>) requestBody.getOrDefault("audios", new ArrayList<>());
+//            List<String> fileUrls = (List<String>) requestBody.getOrDefault("files", new ArrayList<>());
+//
+//            Note note = new Note();
+//            note.setId(UUID.randomUUID());
+//            note.setContent(content);
+//            note.setUser(user);
+//            note.setCreatedAt(LocalDateTime.now());
+//            note.setChangedAt(LocalDateTime.now());
+//
+//            // Добавление OpenGraph ссылок
+//            if (!links.isEmpty()) {
+//                List<OpenGraphData> openGraphData = links.stream()
+//                        .map(link -> noteService.fetchOpenGraphData(link, note))
+//                        .filter(Objects::nonNull)
+//                        .toList();
+//                note.setOpenGraphData(openGraphData);
+//            }
+//
+//            // Сохранение файлов
+//            if (!fileUrls.isEmpty()) {
+//                List<NoteFile> files = fileUrls.stream().map(url -> {
+//                    NoteFile file = new NoteFile();
+//                    file.setId(UUID.randomUUID());
+//                    file.setFileUrl(url);
+//                    file.setUserId(userId);
+//                    file.setNote(note);
+//                    return file;
+//                }).toList();
+//                note.setFiles(files);
+//            }
+//
+//            // Сохранение аудио
+//            if (!audioUrls.isEmpty()) {
+//                List<NoteAudio> audios = audioUrls.stream().map(url -> {
+//                    NoteAudio audio = new NoteAudio();
+//                    audio.setId(UUID.randomUUID());
+//                    audio.setAudioFilePath(url);
+//                    audio.setUserId(userId);
+//                    audio.setNote(note);
+//                    return audio;
+//                }).toList();
+//                note.setAudios(audios);
+//            }
+//
+//            noteService.saveNote(note, userId);
+//            return ResponseEntity.ok("Заметка успешно создана.");
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body("Ошибка при создании заметки: " + e.getMessage());
+//        }
+//    }
 
 
     @PostMapping("/{noteId}/files")
@@ -658,5 +741,61 @@ public class NoteController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
+    @PostMapping("/bot/files")
+    public ResponseEntity<?> uploadFilesFromBot(@RequestBody Map<String, Object> requestBody) {
+        if (requestBody.get("userId") == null || requestBody.get("noteId") == null || requestBody.get("fileUrls") == null) {
+            return ResponseEntity.badRequest().body("Ошибка: не указаны обязательные параметры.");
+        }
+
+        UUID userId = UUID.fromString((String) requestBody.get("userId"));
+        UUID noteId = UUID.fromString((String) requestBody.get("noteId"));
+        List<String> fileUrls = (List<String>) requestBody.get("fileUrls");
+
+        try {
+            Note note = noteService.getNoteById(noteId, null);
+            if (!note.getUser().getId().equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Ошибка: пользователь не владеет этой заметкой.");
+            }
+
+            List<NoteFile> newFiles = new ArrayList<>();
+            for (String fileUrl : fileUrls) {
+                String fileName = UUID.randomUUID() + ".file";
+                String savedPath = noteService.downloadFileFromBot(fileUrl, "files/", fileName);
+
+                NoteFileDTO newFile = new NoteFileDTO();
+                newFile.setId(UUID.randomUUID());
+                newFile.setFileUrl(savedPath);
+                newFile.setFileName(fileName);
+                newFile.setCreatedAt(LocalDateTime.now());
+                newFile.setFilePath("files/" + fileName);
+                NoteFile newFileEntity = noteFileConverter.toEntity(newFile);
+
+                newFiles.add(newFileEntity);
+            }
+
+            note.setFiles(newFiles);
+            Note updatedNote = noteService.saveNote(note, userId);
+            return ResponseEntity.ok(updatedNote);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ошибка при загрузке файлов: " + e.getMessage());
+        }
+    }
+    @DeleteMapping("/{noteId}")
+    @Operation(summary = "Удалить заметку", description = "Удаляет заметку по ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Заметка успешно удалена"),
+            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
+            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
+    })
+    public ResponseEntity<?> deleteNote(@PathVariable UUID noteId) {
+        try {
+            noteService.deleteNoteById(noteId);
+            return ResponseEntity.ok("Заметка успешно удалена");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Ошибка при удалении заметки: " + e.getMessage());
+        }
+    }
+
 }
 

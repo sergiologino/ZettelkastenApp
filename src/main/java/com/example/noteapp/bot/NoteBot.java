@@ -17,6 +17,13 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.File;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Component
@@ -84,177 +91,107 @@ public class NoteBot extends TelegramLongPollingBot {
                user.setTelegramChatId(chatId);
                 userRepository.save(user);
             }
-
-
-
-            // Проверяем тип сообщения
-            // TODO Animation потом поменять на Text
-            if (text != null && (message.hasPhoto() || text.contains("http"))) {
                 handleMixedMessage(message, user);
-            } else if (message.hasAnimation()) {
-                handleTextMessage(message);
-            } else if (message.hasDocument()) {
-                handleDocumentMessage(message, user);
-//                handleMixedMessage(message, user);
-            } else if (message.hasVoice()) {
-                handleVoiceMessage(message, user);
-//                handleMixedMessage(message, user);
-            } else if (message.hasText()) {
-                handleIncomingMessage(message, user);
-//                handleMixedMessage(message, user);
-            } else if (message.hasPhoto()) {
-                handlePhotoMessage(message, user);
-//                handleMixedMessage(message, user);
-            } else {
-                sendResponse(message.getChatId().toString(), "Неизвестный тип сообщения. Поддерживаются текст, документы, ссылки и голосовые сообщения.");
-            }
         }
     }
 
     // Обработка смешанного сообщения
 
-    //TODO USERID
-    private void handleMixedMessage(Message message, User user) { // UserId
-        String chatId = message.getChatId().toString();
-        String text = message.getText();
-        String photoUrl = null;
-        String response =null;
-        System.out.println("Начинаем обработку смешанного сообщения");
 
-        if (message.hasPhoto()) {
-            try {
-                String fileId = message.getPhoto().get(message.getPhoto().size() - 1).getFileId(); // Последнее изображение — наибольшего размера
-                photoUrl = getFileUrl(fileId);
-            } catch (Exception e) {
-                sendResponse(chatId, "Ошибка при получении изображения: " + e.getMessage());
+    private void handleMixedMessage(Message message, User user) {
+        String chatId = message.getChatId().toString();
+        String text = message.hasText() ? message.getText() : null;
+        List<String> links = new ArrayList<>();
+        List<Map<String, Object>> audioFiles = new ArrayList<>();
+        List<Map<String, Object>> noteFiles = new ArrayList<>();
+
+        // Разбор текста на ссылки
+        if (text != null) {
+            String[] words = text.split("\\s+");
+            StringBuilder contentBuilder = new StringBuilder();
+            for (String word : words) {
+                if (word.startsWith("http://") || word.startsWith("https://")) {
+                    links.add(word.trim());
+                } else {
+                    contentBuilder.append(word).append(" ");
+                }
+            }
+            text = contentBuilder.toString().trim();
+        }
+
+        // Загрузка голосовых сообщений
+        if (message.hasVoice()) {
+            String fileId = message.getVoice().getFileId();
+            String downloadedPath = downloadFileFromTelegram(fileId, "audio");
+            if (downloadedPath != null) {
+                Map<String, Object> audioData = new HashMap<>();
+                audioData.put("serverFilePath", downloadedPath);
+                audioData.put("originalName", "voice_message.ogg");
+                audioData.put("audioType", "ogg");
+                audioData.put("size", new File(downloadedPath).length());
+                audioData.put("createdAt", LocalDateTime.now());
+                audioFiles.add(audioData);
             }
         }
 
-
-
-        String link = null; // Хранит найденную ссылку
-        StringBuilder commentBuilder = new StringBuilder(); // Хранит описание
-
-        // Разделяем сообщение на строки
-        String[] lines = text.split("\n");
-        for (String line : lines) {
-            if (line.startsWith("http://") || line.startsWith("https://")) {
-                link = line.trim(); // Если строка - ссылка, сохраняем её
-            } else {
-                commentBuilder.append(line.trim()).append("\n"); // Остальное добавляем в описание
-            }
-        }
-
-        // Если ссылка не найдена, возвращаем сообщение об ошибке
-        if (link == null && (text == null || text.trim().isEmpty())) {
-            sendResponse(chatId, "Ошибка: Сообщение пустое или не содержит ссылки.");
-            return;
-        }
-
-        // Формируем описание
-        String comment = commentBuilder.toString().trim();
-        if (comment.isEmpty()){
-            comment="Без контекста";
-        }
-
-        System.out.println("Отправляем на создание заметки на бэке: " + link);
-        System.out.println("comment: " + comment);
-        System.out.println("link: " + link);
-        System.out.println("photoUrl: " + photoUrl);
-
-
-        String result = sendMixedNoteToBackend(comment, link, photoUrl, user); //userId
-
-        response="Смешанное сообщение обработано ";//+result;
-
-        sendResponse(chatId, response);
-    }
-
-    // Обработка фото
-    private void handlePhotoMessage(Message message, User user) {
-        String chatId = message.getChatId().toString();
-        try {
-            String fileId = message.getPhoto().get(message.getPhoto().size() - 1).getFileId();
-            String photoUrl = getFileUrl(fileId);
-            String response = sendMixedNoteToBackend(null, null, photoUrl, user);
-            sendResponse(chatId, response);
-        } catch (Exception e) {
-            sendResponse(chatId, "Ошибка при обработке изображения: " + e.getMessage());
-        }
-    }
-
-
-    // Обработка документов
-    private void handleDocumentMessage(Message message, User user) {
-        String chatId = message.getChatId().toString();
-        try {
+        // Загрузка документов и изображений
+        if (message.hasDocument()) {
             String fileId = message.getDocument().getFileId();
             String fileName = message.getDocument().getFileName();
-
-            String fileUrl = getFileUrl(fileId);
-            String result = sendNoteToBackend(null, fileUrl, fileName, user);
-            sendResponse(chatId, result);
-        } catch (Exception e) {
-            sendResponse(chatId, "Ошибка при обработке документа: " + e.getMessage());
+            String downloadedPath = downloadFileFromTelegram(fileId, "files");
+            if (downloadedPath != null) {
+                Map<String, Object> fileData = new HashMap<>();
+                fileData.put("serverFilePath", downloadedPath);
+                fileData.put("originalName", fileName);
+                fileData.put("fileType", detectFileType(fileName));
+                fileData.put("size", new File(downloadedPath).length());
+                fileData.put("createdAt", LocalDateTime.now());
+                noteFiles.add(fileData);
+            }
+        } else if (message.hasPhoto()) {
+            String fileId = message.getPhoto().get(message.getPhoto().size() - 1).getFileId();
+            String downloadedPath = downloadFileFromTelegram(fileId, "files");
+            if (downloadedPath != null) {
+                Map<String, Object> fileData = new HashMap<>();
+                fileData.put("serverFilePath", downloadedPath);
+                fileData.put("originalName", "photo.jpg");
+                fileData.put("fileType", "image");
+                fileData.put("size", new File(downloadedPath).length());
+                fileData.put("createdAt", LocalDateTime.now());
+                noteFiles.add(fileData);
+            }
         }
+
+        // Отправка на бэкенд
+        sendMixedNoteToBackend(text, links, audioFiles, noteFiles, user);
+        sendResponse(chatId, "Сообщение обработано.");
     }
 
-    // Обработка голосовых сообщений
-    private void handleVoiceMessage(Message message, User user) {
-        String chatId = message.getChatId().toString();
+
+    private void sendMixedNoteToBackend(String content, List<String> links,
+                                        List<Map<String, Object>> audioFiles,
+                                        List<Map<String, Object>> noteFiles,
+                                        User user) {
         try {
-            String fileId = message.getVoice().getFileId();
-            String fileUrl = getFileUrl(fileId);
+            RestTemplate restTemplate = new RestTemplate();
+            Map<String, Object> requestBody = new HashMap<>();
 
-            String result = sendNoteToBackend(null, fileUrl, "voice.ogg", user);
-            sendResponse(chatId, result);
+            if (content != null) requestBody.put("content", content);
+            if (!links.isEmpty()) requestBody.put("openGraph", links);
+            if (!audioFiles.isEmpty()) requestBody.put("audios", audioFiles);
+            if (!noteFiles.isEmpty()) requestBody.put("files", noteFiles);
+            requestBody.put("userId", user.getId().toString());
+
+            restTemplate.postForEntity(
+                    "http://localhost:8080/api/notes/mixed",
+                    requestBody,
+                    String.class
+            );
         } catch (Exception e) {
-            sendResponse(chatId, "Ошибка при обработке голосового сообщения: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    // Обработка текстового сообщения
-    private void handleTextMessage(Message message) {
-        String chatId = message.getChatId().toString();
-        String userMessage = message.getText();
-
-        if (userMessage.startsWith("/analyze ")) {
-            String noteId = userMessage.substring(9).trim();
-            analyzeNoteInBackend(noteId, chatId);
-        } else {
-            sendResponse(chatId, "Неизвестная команда. Используйте /analyze {noteId}.");
-        }
-    }
-
-    private void handleIncomingMessage(Message message, User user) {
-        String chatId = message.getChatId().toString();
-        String userMessage = message.getText();
-
-        String response;
-//        if (userMessage.equalsIgnoreCase("/start")) {
-//            response = "Добро пожаловать! Используйте команды:\n" +
-//                    "/addnote {текст} - создать заметку\n" +
-//                    "/help - список команд";
-//        } else if (userMessage.startsWith("/addnote ")) {
-//            String title = userMessage.substring(6).trim();
-            String noteContent = userMessage.substring(6).trim();
-//            if (noteContent.isEmpty()) {
-//                response = "Ошибка: текст заметки не может быть пустым.";
-//            } else {
-//                // Отправка заметки на сервер
-                String result = sendNoteToBackend(noteContent, null, null, user);
-                response = "Заметка добавлена ";// + result;
-//            }
-//        } else if (userMessage.equalsIgnoreCase("/help")) {
-//            response = "Доступные команды:\n" +
-//                    "/addnote {текст} - добавить новую заметку\n" +
-//                    "/help - показать команды";
-//        } else {
-//            response = "Неизвестная команда. Используйте /help для списка команд.";
-//        }
-
-        sendResponse(chatId, response);
-    }
 
 
     // Получение URL файла по его ID
@@ -268,64 +205,24 @@ public class NoteBot extends TelegramLongPollingBot {
         }
     }
 
-    // Отправка данных на бэкенд
-    //TODO подставить проект по умолчанию, сделать URL не в коде, а в конфиге
-    private String sendNoteToBackend(String content, String fileUrl, String fileName, User user) {
-        UUID userId = user.getId();
+
+    private void sendFilesToBackend(String noteId, List<String> fileUrls, User user) {
         try {
             RestTemplate restTemplate = new RestTemplate();
             Map<String, Object> requestBody = new HashMap<>();
-            if (content != null) requestBody.put("content", content);
-            if (fileUrl != null) requestBody.put("url", fileUrl);
-            List<String> tags = new ArrayList<>();
-            tags.add("telegram");
-            requestBody.put("tags", tags);
-            requestBody.put("userId", userId.toString());
-
-
-
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    "http://localhost:8080/api/notes/text", requestBody, String.class
-            );
-            return response.getBody();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Ошибка: " + e.getMessage();
-        }
-    }
-//  TODO USERID
-    private String sendMixedNoteToBackend(String content, String url, String photoUrl, User user) {
-//        UUID userId = getCurrentUserId();
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            Map<String, Object> requestBody = new HashMap<>();
-            if (content != null) requestBody.put("content", content);
-            if (url != null) requestBody.put("url", url);
-            if (photoUrl != null) requestBody.put("photoUrl", photoUrl);
-            requestBody.put("fromTelegram", true);
             requestBody.put("userId", user.getId().toString());
+            requestBody.put("noteId", noteId);
+            requestBody.put("fileUrls", fileUrls);
 
-//            HttpHeaders headers = new HttpHeaders();
-//            headers.set("Content-Type", "application/json");
-//
-//            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
-
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    "http://localhost:8080/api/notes/mixed",
+            restTemplate.postForEntity(
+                    "http://localhost:8080/api/notes/bot/files",
                     requestBody,
                     String.class
             );
-            return response.getBody();
         } catch (Exception e) {
             e.printStackTrace();
-            return "Ошибка при отправке смешанного сообщения: " + e.getMessage();
         }
     }
-
-//    private String getAuthToken() {
-//        return null;
-//    }
-
 
     private void sendResponse(String chatId, String response) {
         SendMessage message = new SendMessage();
@@ -351,5 +248,60 @@ public class NoteBot extends TelegramLongPollingBot {
             sendResponse(chatId, "Ошибка при отправке на анализ: " + e.getMessage());
         }
     }
+
+    private String downloadFileFromTelegram(String fileId, String folder) {
+        try {
+            String filePath = execute(new GetFile(fileId)).getFilePath();
+            String fileUrl = "https://api.telegram.org/file/bot" + botToken + "/" + filePath;
+
+            String localFileName = UUID.randomUUID() + "_" + filePath.substring(filePath.lastIndexOf("/") + 1);
+            String localFilePath = "E:/uploaded/" + folder + "/" + localFileName;
+
+            URL url = new URL(fileUrl);
+            try (InputStream in = url.openStream()) {
+                Files.copy(in, Paths.get(localFilePath), StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            return localFilePath;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private String detectFileType(String fileName) {
+        if (fileName == null || fileName.isEmpty()) {
+            return "unknown";
+        }
+
+        String lowerCaseName = fileName.toLowerCase();
+
+        if (lowerCaseName.endsWith(".pdf")) {
+            return "pdf";
+        } else if (lowerCaseName.endsWith(".doc") || lowerCaseName.endsWith(".docx")) {
+            return "document";
+        } else if (lowerCaseName.endsWith(".xls") || lowerCaseName.endsWith(".xlsx")) {
+            return "spreadsheet";
+        } else if (lowerCaseName.endsWith(".ppt") || lowerCaseName.endsWith(".pptx")) {
+            return "presentation";
+        } else if (lowerCaseName.endsWith(".txt") || lowerCaseName.endsWith(".md")) {
+            return "text";
+        } else if (lowerCaseName.endsWith(".csv")) {
+            return "csv";
+        } else if (lowerCaseName.endsWith(".jpg") || lowerCaseName.endsWith(".jpeg") || lowerCaseName.endsWith(".png") || lowerCaseName.endsWith(".gif") || lowerCaseName.endsWith(".bmp") || lowerCaseName.endsWith(".tiff") || lowerCaseName.endsWith(".svg")) {
+            return "image";
+        } else if (lowerCaseName.endsWith(".mp3") || lowerCaseName.endsWith(".wav") || lowerCaseName.endsWith(".ogg") || lowerCaseName.endsWith(".flac") || lowerCaseName.endsWith(".aac")) {
+            return "audio";
+        } else if (lowerCaseName.endsWith(".mp4") || lowerCaseName.endsWith(".avi") || lowerCaseName.endsWith(".mov") || lowerCaseName.endsWith(".mkv") || lowerCaseName.endsWith(".flv")) {
+            return "video";
+        } else if (lowerCaseName.endsWith(".zip") || lowerCaseName.endsWith(".rar") || lowerCaseName.endsWith(".7z") || lowerCaseName.endsWith(".tar") || lowerCaseName.endsWith(".gz")) {
+            return "archive";
+        } else if (lowerCaseName.endsWith(".json") || lowerCaseName.endsWith(".xml") || lowerCaseName.endsWith(".yaml") || lowerCaseName.endsWith(".yml")) {
+            return "data";
+        } else {
+            return "unknown";
+        }
+    }
+
 }
 

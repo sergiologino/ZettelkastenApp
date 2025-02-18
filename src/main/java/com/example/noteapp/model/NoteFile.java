@@ -28,6 +28,9 @@ public class NoteFile {
     @Column(name = "created_at", nullable = true)
     private LocalDateTime createdAt;
 
+    @Column(name="file_type", nullable = true)
+    private String fileType;
+
     //@JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "note_id", nullable = false)
@@ -40,13 +43,15 @@ public class NoteFile {
     public NoteFile() {
     }
 
-    public NoteFile(UUID id, String filePath, String fileName, Note note, String fileUrl, UUID userId) {
+    public NoteFile(UUID id, String filePath, String fileName, Note note, String fileUrl, String fileType, UUID userId) {
         this.id = id;
         this.serverFilePath = filePath;
         this.originalName = fileName;
         this.note = note;
         this.fileUrl = fileUrl;
         this.userId = userId;
+        this.fileType = fileType;
+
     }
 
     public String getFileUrl() {
@@ -122,6 +127,8 @@ public class NoteFile {
 
     public void setUrl(String fileUrl) { this.fileUrl = fileUrl; }
 
+    public String getFileType() { return fileType;}
 
+    public void setFileType(String fileType) {this.fileType = fileType;}
 }
 

@@ -149,6 +149,7 @@ CREATE TABLE  IF NOT EXISTS public.note_files (
 	id uuid NOT NULL,
 	server_file_path varchar(255) NOT NULL,
 	original_name varchar(255) NOT NULL,
+	file_type varchar(255),
 	note_id uuid NOT NULL,
 	user_id UUID ,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
