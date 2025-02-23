@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
@@ -112,11 +113,20 @@ public class NoteBot extends TelegramLongPollingBot {
             for (String word : words) {
                 if (word.startsWith("http://") || word.startsWith("https://")) {
                     links.add(word.trim());
+
                 } else {
                     contentBuilder.append(word).append(" ");
                 }
             }
             text = contentBuilder.toString().trim();
+        }
+        String caption="";
+        if (noteFiles!= null && noteFiles.size() > 0) {
+            caption= message.getCaption();
+            if (caption.isEmpty()) {
+                caption = text.trim();
+            }
+
         }
 
         // Загрузка голосовых сообщений
@@ -163,12 +173,12 @@ public class NoteBot extends TelegramLongPollingBot {
         }
 
         // Отправка на бэкенд
-        sendMixedNoteToBackend(text, links, audioFiles, noteFiles, user);
+        sendMixedNoteToBackend(caption, text, links, audioFiles, noteFiles, user);
         sendResponse(chatId, "Сообщение обработано.");
     }
 
 
-    private void sendMixedNoteToBackend(String content, List<String> links,
+    private void sendMixedNoteToBackend(String caption, String content, List<String> links,
                                         List<Map<String, Object>> audioFiles,
                                         List<Map<String, Object>> noteFiles,
                                         User user) {
@@ -176,7 +186,18 @@ public class NoteBot extends TelegramLongPollingBot {
             RestTemplate restTemplate = new RestTemplate();
             Map<String, Object> requestBody = new HashMap<>();
 
-            if (content != null) requestBody.put("content", content);
+
+            if (content != null) {
+                requestBody.put("content", content);
+            }else{
+                requestBody.put("content", "message from telegram");
+            };
+            if (caption != null) {
+                requestBody.put("caption", caption);
+            }else{
+                requestBody.put("caption", "caption");
+            };
+
             if (!links.isEmpty()) requestBody.put("openGraph", links);
             if (!audioFiles.isEmpty()) requestBody.put("audios", audioFiles);
             if (!noteFiles.isEmpty()) requestBody.put("files", noteFiles);
@@ -249,25 +270,48 @@ public class NoteBot extends TelegramLongPollingBot {
         }
     }
 
-    private String downloadFileFromTelegram(String fileId, String folder) {
-        try {
-            String filePath = execute(new GetFile(fileId)).getFilePath();
-            String fileUrl = "https://api.telegram.org/file/bot" + botToken + "/" + filePath;
 
-            String localFileName = UUID.randomUUID() + "_" + filePath.substring(filePath.lastIndexOf("/") + 1);
-            String localFilePath = "E:/uploaded/" + folder + "/" + localFileName;
+private String downloadFileFromTelegram(String fileId, String folder) {
+    try {
+        System.out.println("📥 Начало загрузки файла из Telegram: fileId = " + fileId);
 
-            URL url = new URL(fileUrl);
-            try (InputStream in = url.openStream()) {
-                Files.copy(in, Paths.get(localFilePath), StandardCopyOption.REPLACE_EXISTING);
-            }
+        // Получаем путь к файлу на сервере Telegram
+        GetFile getFile = new GetFile();
+        getFile.setFileId(fileId);
+        String filePath = execute(getFile).getFilePath();
 
-            return localFilePath;
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (filePath == null || filePath.isEmpty()) {
+            System.err.println("❌ Ошибка: Telegram не вернул путь к файлу для fileId = " + fileId);
             return null;
         }
+
+        // Формируем URL для скачивания
+        String fileUrl = "https://api.telegram.org/file/bot" + botToken + "/" + filePath;
+        System.out.println("🔗 Ссылка на скачивание: " + fileUrl);
+
+        // Определяем локальное имя файла
+        String fileName = UUID.randomUUID() + "_" + filePath.substring(filePath.lastIndexOf("/") + 1);
+        String localFilePath = "E:/uploaded/" + folder + "/" + fileName;
+
+        // Создаём папку, если её нет
+        Path savePath = Paths.get("E:/uploaded/" + folder);
+        if (!Files.exists(savePath)) {
+            Files.createDirectories(savePath);
+        }
+
+        // Скачиваем файл
+        try (InputStream in = new URL(fileUrl).openStream()) {
+            Files.copy(in, Paths.get(localFilePath), StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        System.out.println("✅ Файл успешно загружен: " + localFilePath);
+        return localFilePath;
+    } catch (Exception e) {
+        System.err.println("❌ Ошибка при загрузке файла из Telegram: " + e.getMessage());
+        return null;
     }
+}
+
 
     private String detectFileType(String fileName) {
         if (fileName == null || fileName.isEmpty()) {

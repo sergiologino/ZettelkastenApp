@@ -53,13 +53,18 @@ public class NoteConverter extends AbstractConverter {
                 currentUserId = userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
                 note.setUser(userController.getUserByUserId(currentUserId));
             }
+
             note.setId(dto.getId());
             note.setContent(dto.getContent());
             note.setAnnotation(dto.getAnnotation());
             note.setAudioFilePath(dto.getAudioFilePath());
             note.setAiSummary(dto.isAiSummary());
             note.setRecognizedText(dto.getRecognizedText());
+            if(dto.getProjectId()!=null){
             note.setProject(projectService.getProjectById(dto.getProjectId(),currentUserId));
+            }else{
+                note.setProject(projectService.getProjectById(dto.getProjectId(),currentUserId));
+            }
             note.setTags(tagService.getTagsByNameAndUserId(dto.getTags(), currentUserId));
             note.setNeuralNetwork(dto.getNeuralNetwork());
             note.setFilePath(dto.getFilePath());

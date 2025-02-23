@@ -34,7 +34,7 @@ public class SecurityConfig {
     }
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web.debug(true); // 💡 Включаем debug mode
+        return (web) -> web.debug(false); // 💡 Выключаем debug mode
     }
 
     @Bean

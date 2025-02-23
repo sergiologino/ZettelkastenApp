@@ -91,6 +91,7 @@ logging:
       springframework:
         web: info
         hibernate: info
+        security: warn
       apache:
         tomcat: info
       hibernate:

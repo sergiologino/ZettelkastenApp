@@ -4,8 +4,15 @@ import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.integration.IntegrationException;
 import com.example.noteapp.integration.IntegrationService;
 import com.example.noteapp.mapper.NoteConverter;
-import com.example.noteapp.model.*;
+import com.example.noteapp.model.Note;
+import com.example.noteapp.model.User;
+import com.example.noteapp.model.NoteAudio;
+import com.example.noteapp.model.NoteFile;
+import com.example.noteapp.model.OpenGraphData;
+import com.example.noteapp.model.Tag;
+import com.example.noteapp.model.Project;
 import com.example.noteapp.repository.NoteAudioRepository;
+import com.example.noteapp.repository.NoteFileRepository;
 import com.example.noteapp.repository.NoteRepository;
 import com.example.noteapp.repository.OpenGraphDataRepository;
 import com.example.noteapp.repository.UserRepository;
@@ -15,6 +22,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -116,16 +124,124 @@ public class NoteService {
     }
 
     // Сохранить новую заметку
+    @Transactional
     public Note saveNote(Note note, UUID userId) {
-        if (userId==null){
+        if (userId == null) {
             userId = getCurrentUserId();
-        };
+        }
 
         UUID finalUserId = userId;
-        User user =userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found with id: " + finalUserId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + finalUserId));
+
         note.setUser(user);
-        return noteRepository.save(note);
+
+        // ✅ Если проект не указан, назначаем проект по умолчанию
+        if (note.getProject() == null) {
+            note.setProject(projectService.getDefaultBotProjectForUser(userId));
+        }
+
+        System.out.println("📌 Сохраняем заметку: " + note.getId());
+        System.out.println("📌 Проект: " + (note.getProject() != null ? note.getProject().getId() : "NULL"));
+        System.out.println("📌 Файлы до сохранения заметки: " + note.getFiles().size());
+
+        // ✅ Сначала сохраняем заметку, чтобы у неё появился ID
+        note = noteRepository.saveAndFlush(note);
+
+        // ✅ Устанавливаем note_id в файлах, так как теперь у note есть ID
+        if (!note.getFiles().isEmpty()) {
+            for (NoteFile file : note.getFiles()) {
+                file.setNote(note);
+            }
+            noteFileRepository.saveAll(note.getFiles()); // Сохраняем файлы
+        }
+
+        // ✅ Аналогично для аудиофайлов
+        if (!note.getAudios().isEmpty()) {
+            for (NoteAudio audio : note.getAudios()) {
+                audio.setNote(note);
+            }
+            noteAudioRepository.saveAll(note.getAudios());
+        }
+
+
+        noteRepository.save(note);
+        System.out.println("✅ Заметка сохранена: " + note.getId());
+        return note;
     }
+
+
+    @Transactional
+    public Note saveMixedNote(NoteDTO noteDTO, UUID userId, List<String> links) {
+        Note note = noteConverter.toEntity(noteDTO);
+
+        if (note.getTitle() == null || note.getTitle().isEmpty()){
+            note.setTitle("note id: " + note.getId().toString());
+        }
+
+        // Если проект не указан – назначаем проект по умолчанию
+        if (note.getProject() == null) {
+            note.setProject(projectService.getDefaultBotProjectForUser(userId));
+        }
+
+        // Обработка OpenGraph ссылок
+        if (links != null && !links.isEmpty()) {
+            Note finalNote = note;
+            List<OpenGraphData> openGraphData = links.stream()
+                    .map(link -> fetchOpenGraphData(link, finalNote))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            note.setOpenGraphData(openGraphData);
+        }
+
+        // Убираем вложения – они будут добавлены отдельно
+        note.setFiles(new ArrayList<>());
+        note.setAudios(new ArrayList<>());
+
+        // Сохраняем заметку и получаем её ID
+        note = noteRepository.save(note);
+        System.out.println("✅ Заметка сохранена без вложений: " + note.getId());
+        return note;
+    }
+
+    // Шаг 2. Прикрепление файлов (в новой транзакции)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Note attachFilesToNote(UUID noteId, List<NoteFile> files) {
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new EntityNotFoundException("Note not found with id: " + noteId));
+
+        for (NoteFile file : files) {
+            file.setId(UUID.randomUUID());
+            file.setNote(note);
+        }
+        // Добавляем файлы к заметке и сохраняем их
+        note.getFiles().addAll(files);
+        noteFileRepository.saveAll(files);
+        note.setChangedAt(LocalDateTime.now());
+        note = noteRepository.save(note);
+        System.out.println("✅ Файлы успешно прикреплены к заметке: " + note.getId());
+        return note;
+    }
+
+    // Шаг 3. Прикрепление аудиофайлов (также в новой транзакции)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Note attachAudiosToNote(UUID noteId, List<NoteAudio> audios) {
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new EntityNotFoundException("Note not found with id: " + noteId));
+
+        for (NoteAudio audio : audios) {
+            audio.setId(UUID.randomUUID());
+            audio.setNote(note);
+        }
+        // Добавляем аудиофайлы к заметке и сохраняем их
+        note.getAudios().addAll(audios);
+        noteAudioRepository.saveAll(audios);
+        note.setChangedAt(LocalDateTime.now());
+        note = noteRepository.save(note);
+        System.out.println("✅ Аудиофайлы успешно прикреплены к заметке: " + note.getId());
+        return note;
+    }
+
 
     // Удалить заметку по ID
     @Transactional
@@ -133,6 +249,7 @@ public class NoteService {
         UUID userId = getCurrentUserId();
         noteRepository.deleteByIdAndUserId(id, userId);
     }
+
 
 
     public Note addTagsToNote(UUID noteId, List<String> tagNames, boolean isAutoGenerated) {
@@ -415,28 +532,7 @@ public class NoteService {
         return savedNote;
 
 
-        //TODO временно, чтобы не отправлять на анализ, потом убрать, правильная есть в конце метода
-        // Отправляем на анализ
-//        if (note.isAnalyze()) {
-//            try {
-//                List<String> tags = integrationService.analyzeNoteContent(note);
-//                // Присваиваем автоматически сгенерированные теги
-//                for (String tagName : tags) {
-//                    Tag tag = tagService.createTag(tagName, true);
-//                    if (!note.getTags().contains(tag)) { // Избегаем дублирования тегов
-//                        note.getTags().add(tag);
-//                    }
-//                }
-//            } catch (Exception e) {
-//                // Логируем ошибку, но не прерываем процесс
-//                System.err.println("Ошибка при анализе заметки: " + e.getMessage());
-//                noteRepository.save(note);
-//
-//
-//            }
-//        }
-//        return note;
-    }
+     }
 
 
 
@@ -919,4 +1015,75 @@ public class NoteService {
 
         return openGraphDataMap;
     }
+    // Сохранить новую заметку - старый метод все в одной транзакции
+//    @Transactional
+//    public Note saveMixedNote(NoteDTO noteDTO, UUID userId, List<String>links, List<NoteFile> files, List<NoteAudio> audios) {
+//
+//
+//        Note note= noteConverter.toEntity(noteDTO);
+//
+////        UUID finalUserId = userId;
+////        User user = userRepository.findById(userId)
+////                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + finalUserId));
+////
+////        note.setUser(user);
+//
+//        if(note.getTitle()==null || note.getTitle().equals("")){
+//            note.setTitle("note id: "+note.getId().toString());
+//        }
+//
+//        // ✅ Если проект не указан, назначаем проект по умолчанию
+//        if (note.getProject() == null) {
+//            note.setProject(projectService.getDefaultBotProjectForUser(userId));
+//        }
+//        noteRepository.save(note);
+//
+//        System.out.println("📌 Сохраняем заметку: " + note.getId());
+//        System.out.println("📌 Проект: " + (note.getProject() != null ? note.getProject().getId() : "NULL"));
+//        System.out.println("📌 Файлы до сохранения заметки: " + note.getFiles().size());
+//
+//        if (!links.isEmpty()) {
+//            final Note localNote = note;
+//            List<OpenGraphData> openGraphData = links.stream()
+//                    .map(link -> fetchOpenGraphData(link, localNote)) // Метод возвращает OpenGraphData
+//                    .filter(Objects::nonNull) // Фильтруем null-значения
+//                    .collect(Collectors.toList()); // Используем collect вместо .toList(), если проект использует Java 8-16
+//
+//            note.setOpenGraphData(openGraphData);
+//        }
+//
+//        StringBuilder fileContent= new StringBuilder(" files: ");
+////         ✅ Устанавливаем note_id в файлах, так как теперь у note есть ID
+//        if (!files.isEmpty()) {
+//            for (NoteFile file : note.getFiles()) {
+//                fileContent.append(" ").append(file.getFileName());
+//                file.setId(UUID.randomUUID());
+//                file.setNote(note);
+//
+//            }
+//            note.setFiles(files);
+//            note.setContent(note.getContent()+ fileContent.toString());
+//            noteFileRepository.saveAll(note.getFiles()); // Сохраняем файлы
+//        }
+//
+//        StringBuilder audioContent= new StringBuilder(" audios: ");
+//        // ✅ Аналогично для аудиофайлов
+//        if (!note.getAudios().isEmpty()) {
+//            for (NoteAudio audio : note.getAudios()) {
+//                audioContent.append(" ").append(audio.getAudioFileName());
+//                audio.setId(UUID.randomUUID());
+//                audio.setNote(note);
+//            }
+//            note.setAudios(audios);
+//            note.setContent(note.getContent()+ audioContent.toString());
+//            noteAudioRepository.saveAll(note.getAudios());
+//
+//        }
+//
+//        note = noteRepository.save(note);
+//
+//        System.out.println("✅ Заметка сохранена, вложений: " + note.getFiles().size());
+////        noteRepository.save(note);
+//        return note;
+//    }
 }
