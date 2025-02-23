@@ -43,7 +43,7 @@ public class NoteFile {
     public NoteFile() {
     }
 
-    public NoteFile(UUID id, String filePath, String fileName, Note note, String fileUrl, String fileType, UUID userId) {
+    public NoteFile(UUID id, String filePath, String fileName, Note note, String fileUrl, String fileType, UUID userId, String serverFilePath) {
         this.id = id;
         this.serverFilePath = filePath;
         this.originalName = fileName;
@@ -51,6 +51,8 @@ public class NoteFile {
         this.fileUrl = fileUrl;
         this.userId = userId;
         this.fileType = fileType;
+        this.createdAt = LocalDateTime.now();
+        this.serverFilePath = serverFilePath;
 
     }
 

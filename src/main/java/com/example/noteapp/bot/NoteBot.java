@@ -120,14 +120,7 @@ public class NoteBot extends TelegramLongPollingBot {
             }
             text = contentBuilder.toString().trim();
         }
-        String caption="";
-        if (noteFiles!= null && noteFiles.size() > 0) {
-            caption= message.getCaption();
-            if (caption.isEmpty()) {
-                caption = text.trim();
-            }
 
-        }
 
         // Загрузка голосовых сообщений
         if (message.hasVoice()) {
@@ -170,6 +163,14 @@ public class NoteBot extends TelegramLongPollingBot {
                 fileData.put("createdAt", LocalDateTime.now());
                 noteFiles.add(fileData);
             }
+        }
+        String caption="";
+        if (noteFiles!= null && noteFiles.size() > 0) {
+            caption= message.getCaption();
+            if (caption.isEmpty()) {
+                caption = text.trim();
+            }
+
         }
 
         // Отправка на бэкенд

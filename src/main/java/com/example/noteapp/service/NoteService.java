@@ -204,6 +204,8 @@ public class NoteService {
         return note;
     }
 
+
+
     // Шаг 2. Прикрепление файлов (в новой транзакции)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Note attachFilesToNote(UUID noteId, List<NoteFile> files) {
@@ -211,7 +213,7 @@ public class NoteService {
                 .orElseThrow(() -> new EntityNotFoundException("Note not found with id: " + noteId));
 
         for (NoteFile file : files) {
-            file.setId(UUID.randomUUID());
+//            file.setId(UUID.randomUUID());
             file.setNote(note);
         }
         // Добавляем файлы к заметке и сохраняем их
@@ -230,7 +232,7 @@ public class NoteService {
                 .orElseThrow(() -> new EntityNotFoundException("Note not found with id: " + noteId));
 
         for (NoteAudio audio : audios) {
-            audio.setId(UUID.randomUUID());
+//            audio.setId(UUID.randomUUID());
             audio.setNote(note);
         }
         // Добавляем аудиофайлы к заметке и сохраняем их

@@ -278,11 +278,13 @@ public class NoteController {
 //            note.setId(savedNote.getId());
 
             // Сохранение файлов
+
             List<NoteFile> files = noteFiles.stream().map(data -> {
                 NoteFile file = new NoteFile();
-                file.setId(UUID.randomUUID());
-                file.setServerFilePath((String) data.get("serverFilePath"));
-                file.setFilePath((String) data.get("filePath"));
+//                file.setId(UUID.randomUUID());
+                String tempVar= (String) data.get("serverFilePath");
+                file.setServerFilePath(tempVar);
+//                file.setFilePath((String) data.get("filePath"));
                 file.setOriginalName((String) data.get("originalName"));
                 file.setFileType((String) data.get("fileType"));
                 file.setCreatedAt(LocalDateTime.now());
@@ -293,7 +295,7 @@ public class NoteController {
             // Сохранение аудио
             List<NoteAudio> audios = audioFiles.stream().map(data -> {
                 NoteAudio audio = new NoteAudio();
-                audio.setId(UUID.randomUUID());
+//                audio.setId(UUID.randomUUID());
                 audio.setUrl((String) data.get("url"));
                 audio.setCreatedAt(LocalDateTime.now());
                 audio.setAudioType((String) data.get("type"));//
