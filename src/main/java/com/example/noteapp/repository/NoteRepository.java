@@ -5,6 +5,7 @@ import com.example.noteapp.model.NoteAudio;
 import com.example.noteapp.model.NoteFile;
 import com.example.noteapp.model.Tag;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -42,6 +43,7 @@ public interface NoteRepository extends JpaRepository<Note, UUID> {
     Optional<Note> findByIdAndUserId(@Param("noteId") UUID noteId, @Param("userId") UUID userId);
 
     // Удаление заметки по ID и userId
+    @Modifying
     @Query("DELETE FROM Note n WHERE n.id = :noteId AND n.user.id = :userId")
     void deleteByIdAndUserId(@Param("noteId") UUID noteId, @Param("userId") UUID userId);
 
