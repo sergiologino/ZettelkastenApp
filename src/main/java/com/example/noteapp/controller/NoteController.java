@@ -4,6 +4,7 @@ import com.example.noteapp.dto.NoteAudioDTO;
 import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.dto.NoteFileDTO;
 import com.example.noteapp.dto.OpenGraphRequest;
+import com.example.noteapp.mapper.NoteAudioConverter;
 import com.example.noteapp.mapper.NoteConverter;
 import com.example.noteapp.mapper.NoteFileConverter;
 import com.example.noteapp.model.*;
@@ -27,6 +28,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 
@@ -141,31 +143,94 @@ public class NoteController {
     })
     @PutMapping
     public Note updateNote(@RequestBody NoteDTO noteDTO, HttpServletRequest request) {
+        // Устанавливаем необходимые поля в DTO
+        noteDTO.setNeuralNetwork("YandexGPT-Lite");
+        noteDTO.setAnalyze(true);
+        noteDTO.setChangedAt(LocalDateTime.now());
 
-       noteDTO.setNeuralNetwork("YandexGPT-Lite");
-       noteDTO.setAnalyze(true);
-       noteDTO.setChangedAt(LocalDateTime.now());
-
+        // Собираем URL-ы из списка urls и из ключей openGraphData
         List<String> newUrls = new ArrayList<>();
-       if (noteDTO.getUrls()!=null && !noteDTO.getUrls().isEmpty()) {
-           newUrls.addAll(noteDTO.getUrls());
-       }
+        if (noteDTO.getUrls() != null && !noteDTO.getUrls().isEmpty()) {
+            newUrls.addAll(noteDTO.getUrls());
+        }
+        if (noteDTO.getOpenGraphData() != null) {
+            noteDTO.getOpenGraphData().keySet().forEach(url -> {
+                if (!newUrls.contains(url)) {
+                    System.out.println("Нет такого урла, добавляем! " + url);
+                    newUrls.add(url);
+                }
+            });
+        }
 
-           // Извлечение URL из ключей OpenGraphData и добавление в список urls
-           if (noteDTO.getOpenGraphData() != null) {
-               noteDTO.getOpenGraphData().keySet().forEach(url -> {
+        // Получаем существующую заметку из базы
+        Note existingNote = noteService.getNoteById(noteDTO.getId(), request);
+        if (existingNote == null) {
+            throw new EntityNotFoundException("Заметка не найдена с id: " + noteDTO.getId());
+        }
 
-                   if (!newUrls.contains(url)) {
-                       System.out.println("Нет такого урла, добавляем! " + url);
-                       newUrls.add(url);
-                   }
-               });
-           }
+        // Обновляем примитивные поля заметки
+        existingNote.setTitle(noteDTO.getTitle());
+        existingNote.setContent(noteDTO.getContent());
+        existingNote.setNeuralNetwork(noteDTO.getNeuralNetwork());
+        existingNote.setAnalyze(noteDTO.isAnalyze());
+        existingNote.setChangedAt(LocalDateTime.now());
 
-       Note note = noteService.getNoteById(noteDTO.getId(), request);
-       noteService.updateNote(noteConverter.toEntity(noteDTO), newUrls);
+        // Обновляем список тегов
+        if (noteDTO.getTags() != null) {
+            List<Tag> updatedTags = tagService.getTagsByName(noteDTO.getTags());
+            for (Tag tag : updatedTags) {
+                if (!existingNote.getTags().contains(tag)) {
+                    existingNote.getTags().add(tag);
+                }
+            }
+        } else {
+            existingNote.setTags(new ArrayList<>());
+        }
 
-       return note;
+        // Обновляем коллекцию файлов: если они переданы в DTO,
+        // то для каждого DTO вызываем метод toEntity маппера NoteFileConverter
+        if (noteDTO.getFiles() != null) {
+            List<NoteFile> newFiles = noteDTO.getFiles().stream()
+                    .map(noteFileConverter::toEntity)
+                    .collect(Collectors.toList());
+
+            for (NoteFile file : newFiles) {
+                if (file.getId() == null) {
+                    file.setNote(existingNote);
+                    noteFileRepository.save(file);
+                } else {
+                    NoteFile existingFile = noteFileRepository.findById(file.getId()).orElse(null);
+                    if (existingFile != null) {
+                        existingFile.setFilePath(file.getFilePath());
+                        existingFile.setFileName(file.getFileName());
+                        existingFile.setUrl(file.getUrl());
+                        noteFileRepository.save(existingFile);
+                    }
+                }
+            }
+        }
+
+        // Аналогично для аудиофайлов. Создаем экземпляр NoteAudioConverter (можно его внедрить через DI, если требуется)
+        NoteAudioConverter noteAudioConverter = new NoteAudioConverter();
+        if (noteDTO.getAudios() != null) {
+            List<NoteAudio> newAudios = noteDTO.getAudios().stream()
+                    .map(noteAudioConverter::toEntity)
+                    .collect(Collectors.toList());
+            existingNote.setAudios(newAudios);
+        } else {
+            existingNote.setAudios(new ArrayList<>());
+        }
+
+        // Обновляем проект, если указан projectId в DTO
+        if (noteDTO.getProjectId() != null) {
+            Project project = new Project();
+            project.setId(noteDTO.getProjectId());
+            existingNote.setProject(project);
+        }
+
+        // Вызываем сервис для обновления OpenGraph данных и сохранения заметки
+        Note updatedNote = noteService.updateNote(existingNote, newUrls);
+        return updatedNote;
     }
 
     @Operation(summary = "Создать новую заметку", description = "Создает новую заметку. Может содержать текст, файл или голосовой файл.")

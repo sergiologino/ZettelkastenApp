@@ -436,14 +436,87 @@ public class NoteService {
         }
 
         // Сохраняем заметку
-        System.out.println("окончательная запись заметки: "+note);
-        noteRepository.save(note);
-
-        return note;
+        note.setChangedAt(LocalDateTime.now());
+        System.out.println("Обновляем заметку: " + note);
+        try {
+            return noteRepository.save(note);
+        } catch (Exception e) {
+            e.printStackTrace(); // Логируем ошибку
+            throw e;
+        }
     }
 
-
-
+//    private void updateNoteFiles(Note existingNote, List<NoteFile> newFiles) {
+//        if (newFiles == null) {
+//            newFiles = new ArrayList<>();
+//        }
+//
+//        // Удаляем файлы, которых нет в новом списке
+//        List<NoteFile> filesToRemove = new ArrayList<>(existingNote.getFiles());
+//        filesToRemove.removeAll(newFiles);
+//        noteFileRepository.deleteAll(filesToRemove);
+//
+//        // Обновляем файлы, связываем с заметкой
+//        for (NoteFile file : newFiles) {
+//            if (file.getId() == null) {
+//                file.setId(UUID.randomUUID()); // Генерируем ID, если файл новый
+//            }
+//            file.setNote(existingNote);
+//        }
+//
+//        // Очищаем старый список и добавляем новые файлы
+//        existingNote.getFiles().clear();
+//        existingNote.getFiles().addAll(newFiles);
+//    }
+//
+//    private void updateNoteAudios(Note existingNote, List<NoteAudio> newAudios) {
+//        if (newAudios == null) {
+//            newAudios = new ArrayList<>();
+//        }
+//
+//        // Удаляем аудио, которых нет в новом списке
+//        List<NoteAudio> audiosToRemove = new ArrayList<>(existingNote.getAudios());
+//        audiosToRemove.removeAll(newAudios);
+//        noteAudioRepository.deleteAll(audiosToRemove);
+//
+//        // Обновляем аудиофайлы, связываем с заметкой
+//        for (NoteAudio audio : newAudios) {
+//            if (audio.getId() == null) {
+//                audio.setId(UUID.randomUUID()); // Генерируем ID, если аудио новое
+//            }
+//            audio.setNote(existingNote);
+//        }
+//
+//        // Очищаем старый список и добавляем новые аудио
+//        existingNote.getAudios().clear();
+//        existingNote.getAudios().addAll(newAudios);
+//    }
+//
+//    private void updateOpenGraphData(Note existingNote, List<String> links) {
+//        if (links == null || links.isEmpty()) {
+//            existingNote.getOpenGraphData().clear();
+//            return;
+//        }
+//
+//        // Получаем текущие OpenGraphData из БД
+//        List<OpenGraphData> existingData = openGraphDataRepository.findByNoteId(existingNote.getId());
+//
+//        // Удаляем старые ссылки, которые отсутствуют в новом списке
+//        List<OpenGraphData> dataToDelete = existingData.stream()
+//                .filter(data -> !links.contains(data.getUrl()))
+//                .collect(Collectors.toList());
+//        openGraphDataRepository.deleteAll(dataToDelete);
+//
+//        // Добавляем новые OpenGraph ссылки
+//        List<String> existingUrls = existingData.stream()
+//                .map(OpenGraphData::getUrl)
+//                .collect(Collectors.toList());
+//        links.stream()
+//                .filter(link -> !existingUrls.contains(link))
+//                .map(link -> fetchOpenGraphData(link, existingNote))
+//                .filter(Objects::nonNull)
+//                .forEach(existingNote.getOpenGraphData()::add);
+//    }
 
     @Transactional
     public Note createNote(Note note, List<String> links, UUID userId) {

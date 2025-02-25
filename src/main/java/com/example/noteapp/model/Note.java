@@ -46,12 +46,11 @@ public class Note {
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    @ManyToMany(cascade = CascadeType.ALL)
+    @ManyToMany(cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     @JoinTable(
             name = "note_tags",
             joinColumns = @JoinColumn(name = "note_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
+            inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private List<Tag> tags=new ArrayList<>();
 
     @Column(nullable = true)
