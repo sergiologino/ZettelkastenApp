@@ -64,6 +64,8 @@ public class UserService {
             // Генерируем уникальное имя файла
             String fileName = userId + "_" + avatarFile.getOriginalFilename();
             Path uploadPath = Paths.get("uploads").toAbsolutePath().normalize();
+            System.out.println("путь общий для uploads "+Paths.get("uploads"));
+            System.out.println("путь для сохранения аватаров: "+uploadPath);
 
             // Создаем папку, если ее нет
             if (!Files.exists(uploadPath)) {
