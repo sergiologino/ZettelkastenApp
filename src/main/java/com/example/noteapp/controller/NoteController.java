@@ -291,6 +291,7 @@ public class NoteController {
             }
 
             Note newNote = noteConverter.toEntity(noteDto);
+            noteService.autoFillNoteAttributes(newNote); // Автозаполнение title и content
 
             Note savedNote = noteService.createNote(newNote, newUrls, getCurrentUserId());
             NoteDTO newNoteDTO = noteConverter.toDTO(savedNote);
@@ -371,8 +372,6 @@ public class NoteController {
             }).toList();
 //            note.setAudios(audios);
             NoteAudio noteAudio = new NoteAudio();
-
-
 
             Note savedNote= noteService.saveMixedNote(note, userId, links);
             if (savedNote == null) {

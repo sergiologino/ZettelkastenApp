@@ -1,6 +1,7 @@
 package com.example.noteapp.service;
 
 import com.example.noteapp.dto.NoteDTO;
+import com.example.noteapp.dto.NoteFileDTO;
 import com.example.noteapp.integration.IntegrationException;
 import com.example.noteapp.integration.IntegrationService;
 import com.example.noteapp.mapper.NoteConverter;
@@ -73,6 +74,7 @@ public class NoteService {
     private final UserRepository userRepository;
     private final NoteAudioRepository noteAudioRepository;
     private final NoteFileRepository noteFileRepository;
+//    private final NoteFileDTO noteFileDTO;
 
 
     public NoteService(NoteRepository noteRepository, NoteConverter noteConverter, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, OpenGraphDataRepository openGraphDataRepository, UserRepository userRepository, NoteAudioRepository noteAudioRepository,
@@ -88,6 +90,7 @@ public class NoteService {
         this.userRepository = userRepository;
         this.noteAudioRepository = noteAudioRepository;
         this.noteFileRepository = noteFileRepository;
+//        this.noteFileDTO = noteFileDTO;
     }
 
     public UUID getCurrentUserId() {
@@ -164,7 +167,7 @@ public class NoteService {
             noteAudioRepository.saveAll(note.getAudios());
         }
 
-
+        autoFillNoteAttributes(note); // Автозаполнение title и content
         noteRepository.save(note);
         System.out.println("✅ Заметка сохранена: " + note.getId());
         return note;
@@ -199,6 +202,7 @@ public class NoteService {
         note.setAudios(new ArrayList<>());
 
         // Сохраняем заметку и получаем её ID
+        autoFillNoteAttributes(note); // Автозаполнение title и content
         note = noteRepository.save(note);
         System.out.println("✅ Заметка сохранена без вложений: " + note.getId());
         return note;
@@ -1067,6 +1071,43 @@ public class NoteService {
         }
         return tagList;
     }
+
+    public void autoFillNoteAttributes(Note note) {
+        if (note.getContent() != null && !note.getContent().isEmpty()) {
+            note.setTitle(generateTitleFromContent(note.getContent()));
+            return;
+        }
+
+        if (note.getOpenGraphData() != null && !note.getOpenGraphData().isEmpty()) {
+            // Получаем первый OpenGraph объект из списка
+            OpenGraphData firstOg = note.getOpenGraphData().get(0);
+            note.setTitle(firstOg.getTitle() != null ? firstOg.getTitle() : "OpenGraph Title");
+            note.setContent(firstOg.getDescription() != null ? firstOg.getDescription() : "OpenGraph Description");
+            return;
+        }
+
+        if (note.getFiles() != null && !note.getFiles().isEmpty()) {
+            note.setTitle("Вложений: " + note.getFiles().size());
+            note.setContent(note.getFiles().stream()
+                    .map(NoteFile::getFileName) // Получаем имена файлов
+                    .collect(Collectors.joining("\n")));
+            return;
+        }
+
+        note.setTitle("Заметка " + note.getId());
+        note.setContent("Заметка " + note.getId());
+    }
+
+    private String generateTitleFromContent(String content) {
+        String[] sentences = content.split("(?<=\\.|!|\\?)\\s+"); // Разбиваем на предложения
+        String firstSentence = sentences[0];
+
+        if (firstSentence.length() > 25) {
+            return firstSentence.substring(0, 25) + "...";
+        }
+        return firstSentence;
+    }
+
 
     public Map<String, OpenGraphData> processOpenGraphData(List<String> links) {
         Map<String, OpenGraphData> openGraphDataMap = new HashMap<>();

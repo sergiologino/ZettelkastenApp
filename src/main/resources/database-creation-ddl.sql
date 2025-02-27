@@ -73,7 +73,7 @@ CREATE TABLE  IF NOT EXISTS public.notes (
 	ai_summary bool NULL,
 	annotation varchar(255) NULL,
 	audio_file_path varchar(255) NULL,
-	"content" varchar(255) NOT NULL,
+	"content" text NOT NULL,
 	file_path varchar(255) NULL,
 	file_type varchar(255) NULL,
 	neural_network varchar(255) NULL,
