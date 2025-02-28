@@ -22,12 +22,14 @@ public class WebConfig {
             }
             @Override
             public void addResourceHandlers(ResourceHandlerRegistry registry) {
+                String fileStoragePath = System.getenv("FILE_STORAGE_PATH");
+                String audioStoragePath = System.getenv("AUDIO_STORAGE_PATH");
                 // Настраиваем маппинг для файлов
                 registry.addResourceHandler("/files/audio/**") // URL для доступа к файлам
-                        .addResourceLocations("file:/E:/uploaded/uploaded-audio/"); // Абсолютный путь до директории с файлами
+                        .addResourceLocations("file:" + audioStoragePath + "/"); // Абсолютный путь до директории с файлами
 
                 registry.addResourceHandler("/files/documents/**")// URL для доступа к файлам
-                        .addResourceLocations("file:/E:/uploaded/uploaded-files/");// Абсолютный путь до директории с файлами
+                        .addResourceLocations("file:" + fileStoragePath + "/"); // Абсолютный путь до директории с файлами
             }
 
         };
