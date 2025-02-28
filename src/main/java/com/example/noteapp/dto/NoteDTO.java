@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Getter
@@ -15,10 +16,12 @@ public class NoteDTO {
 
     private UUID id;
 
+    private String title;
+
     private String content;
 
     @JsonProperty("urls")
-    private List<String> urls;
+    private List<String> urls = new ArrayList<>();;
 
     private String audioFilePath;
 
@@ -30,7 +33,7 @@ public class NoteDTO {
 
     private UUID projectId;
 
-    private List<String> tags;
+    private List<String> tags= new ArrayList<>();;
 
     private String filePath;
 
@@ -48,11 +51,25 @@ public class NoteDTO {
 
     private Integer height;
 
-    private List<NoteFileDTO> files;
+    private LocalDateTime createdAt;
 
-    private List<NoteAudioDTO> audios;
+    private LocalDateTime changedAt;
 
-   private Map<String, OpenGraphData> openGraphData; // Данные Open Graph
+    private List<NoteFileDTO> files = new ArrayList<>();;
+
+    private List<NoteAudioDTO> audios = new ArrayList<>();;
+
+    private UUID userId;
+
+    private List<String> matches;
+
+    private String projectName;
+
+    private String projectColor;
+
+    private String formattedDate;
+
+    private Map<String, OpenGraphData> openGraphData = new HashMap<>();; // Данные Open Graph
 
     public NoteDTO() {}
 
@@ -84,6 +101,34 @@ public class NoteDTO {
         this.openGraphData = null;
 
     }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+
+    public String getTitle() {return title;    }
+
+    public void setTitle(String title) {this.title = title;}
+
+    public Integer getWidth() {return width;    }
+
+    public void setWidth(Integer width) {this.width = width;    }
+
+    public Integer getHeight() {return height;    }
+
+    public void setHeight(Integer height) {this.height = height;    }
+
+    public LocalDateTime getCreatedAt() {return createdAt;    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {this.createdAt = createdAt;    }
+
+    public LocalDateTime getChangedAt() {return changedAt;}
+
+    public void setChangedAt(LocalDateTime changedAt) {this.changedAt = changedAt;}
 
     public List<NoteFileDTO> getFiles() {
         return files;

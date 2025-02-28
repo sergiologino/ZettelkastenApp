@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -32,26 +33,45 @@ public class NoteAudio {
     @Column(name = "size", nullable = true)
     private BigDecimal size;
 
+    @Column(name = "created_at", nullable = true)
+    private LocalDateTime createdAt;
+
     //@JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
     @JsonBackReference // Указывает, что это обратная ссылка
     private Note note;
 
+    @Column(name = "user_id", nullable = true)
+    private UUID userId;
+
     public NoteAudio() {
     }
 
-    public NoteAudio(UUID id, String filePath, String fileName, Note note, String url) {
+    public NoteAudio(UUID id, String filePath, String fileName, Note note, String url, UUID userId) {
         this.id = id;
         this.serverFilePath = filePath;
         this.originalName = fileName;
         this.note = note;
         this.url = url;
+        this.userId = userId;
+
     }
 
     // Геттеры и сеттеры
 
 
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+
+    public LocalDateTime getCreatedAt() {return createdAt;}
+
+    public void setCreatedAt(LocalDateTime createdAt) {this.createdAt = createdAt;}
 
     public String getServerFilePath() {
         return serverFilePath;

@@ -12,10 +12,12 @@ public class WebConfig {
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
+
             @Override
             public void addCorsMappings(CorsRegistry registry) {
+//                System.out.println("WebConfig загружен: CORS включен");
                 registry.addMapping("/api/**") // Разрешить CORS для всех эндпоинтов API
-                        .allowedOrigins("http://localhost:3003") // Укажите порт вашего фронтенда
+                        .allowedOriginPatterns("*")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Разрешённые методы
                         .allowedHeaders("*") // Разрешённые заголовки
                         .allowCredentials(true); // Если используются куки или авторизация
@@ -26,7 +28,7 @@ public class WebConfig {
                 registry.addResourceHandler("/files/audio/**") // URL для доступа к файлам
                         .addResourceLocations("file:/E:/uploaded/uploaded-audio/"); // Абсолютный путь до директории с файлами
 
-                registry.addResourceHandler("/files/documents/**")// URL для доступа к файлам
+                registry.addResourceHandler("/files/documents/*н*")// URL для доступа к файлам
                         .addResourceLocations("file:/E:/uploaded/uploaded-files/");// Абсолютный путь до директории с файлами
             }
 

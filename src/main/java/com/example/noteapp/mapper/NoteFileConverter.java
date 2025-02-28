@@ -16,6 +16,7 @@ public class NoteFileConverter {
         dto.setFileName(noteFile.getFileName());
         dto.setFilePath(noteFile.getFilePath());
         dto.setFileUrl(noteFile.getUrl());
+        dto.setCreatedAt(noteFile.getCreatedAt());
         return dto;
     }
 
@@ -28,6 +29,10 @@ public class NoteFileConverter {
         noteFile.setFileName(dto.getFileName());
         noteFile.setFilePath(dto.getFilePath());
         noteFile.setUrl(dto.getFileUrl());
+        noteFile.setCreatedAt(dto.getCreatedAt());
+        noteFile.setFileUrl(dto.getFileUrl());
+        noteFile.setOriginalName(dto.getOriginalName());
+        noteFile.setFileType(dto.getFileType());
         return noteFile;
     }
 }

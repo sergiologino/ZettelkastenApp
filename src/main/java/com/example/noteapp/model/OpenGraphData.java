@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -17,7 +18,7 @@ public class OpenGraphData {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(name="url", nullable = false)
     private String url;
 
     @Setter
@@ -27,17 +28,37 @@ public class OpenGraphData {
     @Setter
     private String image;
 
+    @Column(name="created_at",nullable = true)
+    private LocalDateTime createdAt;
+
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
+
+
     @Setter
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
-    @JsonBackReference
     private Note note;
 
     // Геттеры и сеттеры
+
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+
     public UUID getId() {
         return id;
     }
+
+    public LocalDateTime getCreatedAt() {return createdAt;}
+
+    public void setCreatedAt(LocalDateTime createdAt) {this.createdAt = createdAt;}
 
     public String getUrl() {
         return url;

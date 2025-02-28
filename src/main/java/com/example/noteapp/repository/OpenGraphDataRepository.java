@@ -11,8 +11,6 @@ import java.util.UUID;
 
 public interface OpenGraphDataRepository extends JpaRepository<OpenGraphData, UUID> {
 
-    boolean existsByNoteIdAndUrl(UUID noteId, String url);
-
     @Query("SELECT og.url FROM OpenGraphData og WHERE og.note.id = :noteId")
     List<String> findUrlsByNoteId(@Param("noteId") UUID noteId);
 
@@ -28,5 +26,18 @@ public interface OpenGraphDataRepository extends JpaRepository<OpenGraphData, UU
     @Query("SELECT og FROM OpenGraphData og WHERE og.url = :url AND og.note.id = :noteId")
     Optional<OpenGraphData> findByUrlAndNoteId(@Param("url") String url, @Param("noteId") UUID noteId);
 
+    // Проверка наличия данных OpenGraph для заметки
+    boolean existsByNoteIdAndUrl(UUID noteId, String url);
 
+    // Получение всех URL OpenGraph для заметки
+    @Query("SELECT og.url FROM OpenGraphData og WHERE og.note.id = :noteId AND og.note.user.id = :userId")
+    List<String> findUrlsByNoteIdAndUserId(@Param("noteId") UUID noteId, @Param("userId") UUID userId);
+
+    // Поиск данных OpenGraph по URL
+    @Query("SELECT og FROM OpenGraphData og WHERE og.url = :url AND og.note.user.id = :userId")
+    Optional<OpenGraphData> findByUrlAndUserId(@Param("url") String url, @Param("userId") UUID userId);
+
+    // Поиск данных OpenGraph для заметки по URL
+    @Query("SELECT og FROM OpenGraphData og WHERE og.note.id = :noteId AND og.url IN :urls AND og.note.user.id = :userId")
+    List<OpenGraphData> findByNoteIdAndUrlsAndUserId(@Param("noteId") UUID noteId, @Param("urls") List<String> urls, @Param("userId") UUID userId);
 }

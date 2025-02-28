@@ -1,36 +1,41 @@
 package com.example.noteapp.mapper;
 
+import com.example.noteapp.controller.UserController;
 import com.example.noteapp.dto.NoteDTO;
-import com.example.noteapp.model.Note;
-import com.example.noteapp.model.NoteAudio;
-import com.example.noteapp.model.NoteFile;
-import com.example.noteapp.model.OpenGraphData;
+import com.example.noteapp.model.*;
+import com.example.noteapp.repository.UserRepository;
 import com.example.noteapp.service.NoteService;
 import com.example.noteapp.service.ProjectService;
 import com.example.noteapp.service.TagService;
+import com.example.noteapp.service.UserService;
+import com.example.noteapp.utils.SecurityUtils;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
 public class NoteConverter extends AbstractConverter {
     private final ProjectService projectService;
     private final TagService tagService;
-    private final NoteService noteService;
+
     private final NoteFileConverter noteFileConverter;
     private final NoteAudioConverter noteAudioConverter;
+    private final UserController userController;
+    private final UserRepository userRepository;
+    private final UserService userService;
 
 
-    public NoteConverter(ProjectService projectService, TagService tagService, NoteService noteService, NoteFileConverter noteFileConverter, NoteAudioConverter noteAudioConverter) {
+    public NoteConverter(ProjectService projectService, TagService tagService, NoteFileConverter noteFileConverter, NoteAudioConverter noteAudioConverter, UserController userController, UserRepository userRepository, UserService userService) {
         super();
         this.projectService = projectService;
         this.tagService = tagService;
-        this.noteService = noteService;
+
         this.noteFileConverter = noteFileConverter;
         this.noteAudioConverter = noteAudioConverter;
+        this.userController = userController;
+        this.userRepository = userRepository;
+        this.userService = userService;
     }
 
     @Override
@@ -39,14 +44,28 @@ public class NoteConverter extends AbstractConverter {
             return null;
         } else {
             Note note = new Note();
+            UUID currentUserId = null;
+            if (dto.getUserId() != null) {
+                currentUserId = dto.getUserId();
+                User currentUser = userRepository.findById(dto.getUserId()).get();
+                note.setUser(currentUser);;
+            }else {
+                currentUserId = userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
+                note.setUser(userController.getUserByUserId(currentUserId));
+            }
+
             note.setId(dto.getId());
             note.setContent(dto.getContent());
             note.setAnnotation(dto.getAnnotation());
             note.setAudioFilePath(dto.getAudioFilePath());
             note.setAiSummary(dto.isAiSummary());
             note.setRecognizedText(dto.getRecognizedText());
-            note.setProject(projectService.getProjectById(dto.getProjectId()));
-            note.setTags(tagService.getTagsByName(dto.getTags()));
+            if(dto.getProjectId()!=null){
+            note.setProject(projectService.getProjectById(dto.getProjectId(),currentUserId));
+            }else{
+                note.setProject(projectService.getProjectById(dto.getProjectId(),currentUserId));
+            }
+            note.setTags(tagService.getTagsByNameAndUserId(dto.getTags(), currentUserId));
             note.setNeuralNetwork(dto.getNeuralNetwork());
             note.setFilePath(dto.getFilePath());
             note.setFileType(dto.getFileType());
@@ -55,6 +74,14 @@ public class NoteConverter extends AbstractConverter {
             note.setPositionY(dto.getY());
             note.setWidth(dto.getWidth());
             note.setHeight(dto.getHeight());
+            note.setTitle(dto.getTitle());
+            note.setCreatedAt(dto.getCreatedAt());
+            note.setChangedAt(dto.getChangedAt());
+
+
+
+
+
 
             if (dto.getOpenGraphData() != null) {
                 List<OpenGraphData> openGraphDataList = dto.getOpenGraphData().entrySet().stream()
@@ -74,12 +101,12 @@ public class NoteConverter extends AbstractConverter {
 
 
 //TODO снять комментарий после преобразования audios и files в массив на фронте
-//            note.setFiles(dto.getFiles().stream()
-//                    .map(noteFileConverter::toEntity)
-//                    .collect(Collectors.toList()));
-//            note.setAudios(dto.getAudios().stream()
-//                    .map(noteAudioConverter::toEntity)
-//                    .collect(Collectors.toList()));
+            note.setFiles(dto.getFiles().stream()
+                    .map(noteFileConverter::toEntity)
+                    .collect(Collectors.toList()));
+            note.setAudios(dto.getAudios().stream()
+                    .map(noteAudioConverter::toEntity)
+                    .collect(Collectors.toList()));
 
 
 
@@ -110,6 +137,10 @@ public class NoteConverter extends AbstractConverter {
             newNoteDTO.setWidth(note.getWidth());
             newNoteDTO.setHeight(note.getHeight());
             newNoteDTO.setUrls(new ArrayList<String>());
+            newNoteDTO.setTitle(note.getTitle());
+            newNoteDTO.setCreatedAt(note.getCreatedAt());
+            newNoteDTO.setChangedAt(note.getChangedAt());
+            newNoteDTO.setUserId(note.getUser().getId());
 
             if (note.getOpenGraphData() != null) {
                 Map<String, OpenGraphData> openGraphDataMap = note.getOpenGraphData().stream()

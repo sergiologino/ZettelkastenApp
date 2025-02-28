@@ -1,12 +1,15 @@
 package com.example.noteapp.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Entity
@@ -14,8 +17,12 @@ import java.util.UUID;
 public class Note {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+//    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id", nullable = false, updatable = false)
+    private UUID id = UUID.randomUUID();
+
+    @Column(name="title", nullable = true)
+    private String title;
 
     @NotNull(message = "Текст заметки обязателен.")
     @Column(columnDefinition = "TEXT", nullable = false)
@@ -39,12 +46,11 @@ public class Note {
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    @ManyToMany(cascade = CascadeType.ALL)
+    @ManyToMany(cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     @JoinTable(
             name = "note_tags",
             joinColumns = @JoinColumn(name = "note_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
+            inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private List<Tag> tags=new ArrayList<>();
 
     @Column(nullable = true)
@@ -72,17 +78,29 @@ public class Note {
     @Column(name = "height", nullable = true)
     private Integer height;
 
-    @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
-    private List<OpenGraphData> openGraphData = new ArrayList<>();;
+    @Column(name="created_at", nullable = true)
+    private LocalDateTime createdAt;
+
+    @Column(name="changed_at", nullable = true)
+    private LocalDateTime changedAt;
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<OpenGraphData> openGraphData = new ArrayList<>();;
+
+    @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference // Указывает, что это основная связь
     private List<NoteFile> files = new ArrayList<>();
 
-    @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference // Указывает, что это основная связь
     private List<NoteAudio> audios = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonBackReference // ❗️ Указываем, что это "дочерняя" сторона связи
+    private User user;
+
 
 
     // constructors
@@ -90,6 +108,26 @@ public class Note {
     }
 
     //Setters and Getters
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public String getTitle() {return title;}
+
+    public void setTitle(String title) {this.title = title;}
+
+    public LocalDateTime getCreatedAt() {return createdAt;    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {this.createdAt = createdAt;    }
+
+    public LocalDateTime getChangedAt() {return changedAt;    }
+
+    public void setChangedAt(LocalDateTime changedAt) {this.changedAt = changedAt;    }
 
     public Integer getWidth() {return width;}
 

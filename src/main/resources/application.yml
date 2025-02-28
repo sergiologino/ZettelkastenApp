@@ -3,8 +3,35 @@ spring:
     allow-bean-definition-overriding: true
   application:
     name: noteapp
+  security:
+    oauth2:
+      client:
+        registration:
+          yandex:
+            client-id: a0bc7b7381a84739be01111f12d9447e
+            client-secret: c0701b6fad07403c8a8b6f9e99874e1f
+            scope:
+              - login
+              - email
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://localhost:8081/login/oauth2/code/yandex"  # "{baseUrl}/login/oauth2/code/yandex"
+            client-name: Yandex
+        provider:
+          yandex:
+            authorization-uri: https://oauth.yandex.ru/authorize
+            token-uri: https://oauth.yandex.ru/token
+            user-info-uri: https://login.yandex.ru/info
+            user-name-attribute: id
+    password:
+      encoder-strength: 12
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 150MB
+
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/noteapp
+    url: jdbc:postgresql://localhost:5432/note_app_db
     username: postgres
     password: postgres
   jpa:
@@ -14,14 +41,20 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  server:
-    port: 8081
+server:
+  port: 8080
   security:
     user:
       name: admin
       password: admin123
       enabled: false
   servlet:
+    session:
+      cookie:
+        secure: false
+        http-only: true
+        same-site: none
+      tracking-modes: cookie
     multipart:
       enabled: true
       max-file-size: 200MB
@@ -55,12 +88,18 @@ logging:
     console: INFO
   level:
     org:
+      springframework:
+        web: info
+        hibernate: info
+        security: warn
+      apache:
+        tomcat: info
       hibernate:
-        SQL: DEBUG
+        SQL: info
         type:
           descriptor:
             sql:
-              BasicBinder: TRACE
+              BasicBinder: info
 file:
   storage-path: /Users/savki/uploaded/uploaded-files
 audio:
@@ -69,4 +108,10 @@ audio:
   storage-directory: E:/uploaded
 open-graph-data:
   enabled: true
+
+jwt:
+  secret: e0ccMN3fqRE30HcE6Me2xnGF88e1xVrGwNndNzTd
+  expiration:
+    access: 3600000  # 1 ???
+    refresh: 86400000  # 1 ????
 

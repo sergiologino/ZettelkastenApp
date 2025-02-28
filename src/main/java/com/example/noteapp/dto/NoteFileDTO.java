@@ -3,6 +3,7 @@ package com.example.noteapp.dto;
 import lombok.*;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public class NoteFileDTO implements Serializable {
@@ -13,21 +14,35 @@ public class NoteFileDTO implements Serializable {
 
     private String filePath;
 
+    private String originalName;
 
-    String name;
+    private String fileType;
+
+
+    private String name;
+
+
+    private LocalDateTime createdAt;
 
 
 
-    public NoteFileDTO(UUID id, String url, String name, String filePath, String fileUrl) {
+    public NoteFileDTO(UUID id, String url, String name, String filePath, LocalDateTime createdAt, String fileType, String originalName) {
         this.id = id;
         this.name = name;
         this.fileUrl = fileUrl;
         this.filePath = filePath;
+        this.originalName = originalName;
+        this.fileType = fileType;
+
 
     }
 
     public NoteFileDTO() {
     }
+
+    public LocalDateTime getCreatedAt() {return createdAt;}
+
+    public void setCreatedAt(LocalDateTime createdAt) {this.createdAt = createdAt;}
 
     public String getName() {
         return name;
@@ -36,7 +51,6 @@ public class NoteFileDTO implements Serializable {
     public void setName(String name) {
         this.name = name;
     }
-
 
     public void setFileName(String name) {
             this.name = name;
@@ -69,4 +83,21 @@ public class NoteFileDTO implements Serializable {
     public void setFileUrl(String fileUrl) {
         this.fileUrl = fileUrl;
     }
+
+    public String getOriginalName() {
+        return originalName;
+    }
+
+    public void setOriginalName(String originalName) {
+        this.originalName = originalName;
+    }
+
+    public String getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(String fileType) {
+        this.fileType = fileType;
+    }
+
 }
