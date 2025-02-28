@@ -28,21 +28,48 @@ public class NoteFile {
     @Column(name = "created_at", nullable = true)
     private LocalDateTime createdAt;
 
+    @Column(name="file_type", nullable = true)
+    private String fileType;
+
     //@JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "note_id", nullable = false)
     @JsonBackReference // Указывает, что это обратная ссылка
     private Note note;
 
+    @Column(name = "user_id", nullable = true)
+    private UUID userId;
+
     public NoteFile() {
     }
 
-    public NoteFile(UUID id, String filePath, String fileName, Note note, String fileUrl) {
+    public NoteFile(UUID id, String filePath, String fileName, Note note, String fileUrl, String fileType, UUID userId, String serverFilePath) {
         this.id = id;
         this.serverFilePath = filePath;
         this.originalName = fileName;
         this.note = note;
         this.fileUrl = fileUrl;
+        this.userId = userId;
+        this.fileType = fileType;
+        this.createdAt = LocalDateTime.now();
+        this.serverFilePath = serverFilePath;
+
+    }
+
+    public String getFileUrl() {
+        return fileUrl;
+    }
+
+    public void setFileUrl(String fileUrl) {
+        this.fileUrl = fileUrl;
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
     }
 
     public LocalDateTime getCreatedAt() {return createdAt;}
@@ -102,6 +129,8 @@ public class NoteFile {
 
     public void setUrl(String fileUrl) { this.fileUrl = fileUrl; }
 
+    public String getFileType() { return fileType;}
 
+    public void setFileType(String fileType) {this.fileType = fileType;}
 }
 

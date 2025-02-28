@@ -1,12 +1,19 @@
 package com.example.noteapp.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
 @Table(name = "users")
+@Setter
+@Getter
 public class User {
 
     @Id
@@ -23,7 +30,34 @@ public class User {
     private String email;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference // Обозначаем "родительскую" сторону связи
     private List<Note> notes;
+
+    @Column(name = "tlg_username", length = 32)
+    private String tlgUsername;  // Telegram username
+
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;  // Номер телефона
+
+    @Column(name = "billing", nullable = false)
+    private boolean billing;  // Признак платного тарифа
+
+//    @Lob
+    @Column(name = "avatar", columnDefinition = "BYTEA")
+    private byte[] avatar;  // Аватар пользователя (хранится как BLOB)
+
+    @Column(name = "avatar_url", nullable = true)
+    private String avatarUrl;
+
+    @Column(name = "color_theme", nullable = false)
+    private boolean colorTheme;  // Темная/светлая тема
+
+    private boolean enabled = true;
+
+
+
+    @Column(name = "telegram_chat_id", unique = true)
+    private String telegramChatId;
 
     // Геттеры и сеттеры
     public UUID getId() {
@@ -64,5 +98,63 @@ public class User {
 
     public void setNotes(List<Note> notes) {
         this.notes = notes;
+    }
+
+    public String getTlgUsername() {
+        return tlgUsername;
+    }
+
+    public void setTlgUsername(String tlgUsername) {
+        this.tlgUsername = tlgUsername;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public boolean isBilling() {
+        return billing;
+    }
+
+    public void setBilling(boolean billing) {
+        this.billing = billing;
+    }
+
+    public byte[] getAvatar() {
+        return avatar;
+    }
+
+//    public void setAvatar(MultipartFile file) throws IOException {
+//        this.avatar = file.getBytes();
+//    }
+public void setAvatar(byte[] avatar) {
+        this.avatar = null;
+}
+
+    public boolean isColorTheme() {
+        return colorTheme;
+    }
+
+    public void setColorTheme(boolean colorTheme) {
+        this.colorTheme = colorTheme;
+    }
+
+    public boolean getTelegramChatId() {return telegramChatId != null;
+
+    };
+
+    public void setTelegramChatId(String chatId) {
+    };
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

@@ -28,20 +28,30 @@ public class OpenGraphData {
     @Setter
     private String image;
 
-
-
     @Column(name="created_at",nullable = true)
     private LocalDateTime createdAt;
+
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
 
     @Setter
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id", nullable = false)
-    @JsonBackReference
     private Note note;
 
     // Геттеры и сеттеры
+
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+
     public UUID getId() {
         return id;
     }

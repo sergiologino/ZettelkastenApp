@@ -42,18 +42,32 @@ public class NoteAudio {
     @JsonBackReference // Указывает, что это обратная ссылка
     private Note note;
 
+    @Column(name = "user_id", nullable = true)
+    private UUID userId;
+
     public NoteAudio() {
     }
 
-    public NoteAudio(UUID id, String filePath, String fileName, Note note, String url) {
+    public NoteAudio(UUID id, String filePath, String fileName, Note note, String url, UUID userId) {
         this.id = id;
         this.serverFilePath = filePath;
         this.originalName = fileName;
         this.note = note;
         this.url = url;
+        this.userId = userId;
+
     }
 
     // Геттеры и сеттеры
+
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
 
     public LocalDateTime getCreatedAt() {return createdAt;}
 

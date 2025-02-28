@@ -21,7 +21,7 @@ public class NoteDTO {
     private String content;
 
     @JsonProperty("urls")
-    private List<String> urls;
+    private List<String> urls = new ArrayList<>();;
 
     private String audioFilePath;
 
@@ -33,7 +33,7 @@ public class NoteDTO {
 
     private UUID projectId;
 
-    private List<String> tags;
+    private List<String> tags= new ArrayList<>();;
 
     private String filePath;
 
@@ -55,11 +55,21 @@ public class NoteDTO {
 
     private LocalDateTime changedAt;
 
-    private List<NoteFileDTO> files;
+    private List<NoteFileDTO> files = new ArrayList<>();;
 
-    private List<NoteAudioDTO> audios;
+    private List<NoteAudioDTO> audios = new ArrayList<>();;
 
-   private Map<String, OpenGraphData> openGraphData; // Данные Open Graph
+    private UUID userId;
+
+    private List<String> matches;
+
+    private String projectName;
+
+    private String projectColor;
+
+    private String formattedDate;
+
+    private Map<String, OpenGraphData> openGraphData = new HashMap<>();; // Данные Open Graph
 
     public NoteDTO() {}
 
@@ -90,6 +100,14 @@ public class NoteDTO {
         this.audios = null;
         this.openGraphData = null;
 
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
     }
 
     public String getTitle() {return title;    }

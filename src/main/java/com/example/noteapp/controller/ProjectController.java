@@ -1,17 +1,18 @@
 package com.example.noteapp.controller;
 
-import com.example.noteapp.dto.NoteDTO;
 import com.example.noteapp.dto.ProjectDTO;
 import com.example.noteapp.mapper.NoteConverter;
-import com.example.noteapp.model.Note;
 import com.example.noteapp.model.Project;
+import com.example.noteapp.repository.UserRepository;
 import com.example.noteapp.service.NoteService;
 import com.example.noteapp.service.ProjectService;
+import com.example.noteapp.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.annotation.PostConstruct;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,18 +21,23 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+
+
 @RestController
-@RequestMapping("/api/projects")
+@RequestMapping(value = "/api/projects", produces = "application/json")
 public class ProjectController {
 
-    private final ProjectService projectService;
-    private final NoteService noteService;
-    private final NoteConverter noteConverter;
+    @PostConstruct
+    public void init() {
+        System.out.println("✅ ProjectController зарегистрирован в Spring");
+    }
 
-    public ProjectController(ProjectService projectService, NoteService noteService, NoteConverter noteConverter) {
+    private final ProjectService projectService;
+    private final UserRepository userRepository;
+
+    public ProjectController(ProjectService projectService, NoteService noteService, NoteConverter noteConverter, UserRepository userRepository) {
         this.projectService = projectService;
-        this.noteService = noteService;
-        this.noteConverter = noteConverter;
+        this.userRepository = userRepository;
     }
 
     @ApiResponse(responseCode = "200", description = "Список проектов успешно возвращен",
@@ -55,7 +61,8 @@ public class ProjectController {
     })
     @GetMapping("/{id}")
     public Project getProjectById(@PathVariable UUID id) {
-        Project responseProject = projectService.getProjectById(id);
+        UUID userId = userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
+        Project responseProject = projectService.getProjectById(id, userId);
         return responseProject;
     }
 
@@ -68,8 +75,11 @@ public class ProjectController {
             @ApiResponse(responseCode = "500", description = "Ошибка сервера")
     })
     @PostMapping
-    public Project createProject(@RequestBody Project project) {
-        return projectService.saveProject(project);
+    public ResponseEntity<Project> createProject(@RequestBody Project project) {
+
+        System.out.println(" Вызван createProject с данными: " + project.getName());
+        Project createdProject = projectService.saveProject(project);
+        return ResponseEntity.ok(createdProject);
     }
 
     @Operation(summary = "Удалить проект", description = "Удаляет проект по указанному идентификатору.")
@@ -81,7 +91,8 @@ public class ProjectController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deleteProjectById(@PathVariable UUID id) {
         projectService.deleteProjectById(id);
-        Project project = projectService.getProjectById(id);
+        UUID userId = userRepository.findByUsername(SecurityUtils.getCurrentUserId()).getId();
+        Project project = projectService.getProjectById(id, userId);
              //   .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Проект не найден"));
 
         // Удаляем связанные заметки TODO реализовать эндпойнт
@@ -93,16 +104,4 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
 
-//    @GetMapping("/{projectId}/notes")
-//    public List<NoteDTO> getNotesByProject(@PathVariable UUID projectId) {
-//        Project project = projectService.getProjectById(projectId);
-//        List<NoteDTO> newNoteDTOList=new ArrayList<>();
-//        List<Note> foundedNotes=noteService.getNotesByProjectId(projectId);
-//        for(Note note:foundedNotes){
-//            note.setProject(project);
-//            note.setTags(noteService.getTagsByNoteId(note.getId()));
-//            newNoteDTOList.add(noteConverter.toDTO(note));
-//        }
-//        return newNoteDTOList;
-//    }
 }
