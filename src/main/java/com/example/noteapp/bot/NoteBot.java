@@ -167,7 +167,7 @@ public class NoteBot extends TelegramLongPollingBot {
         String caption="";
         if (noteFiles!= null && noteFiles.size() > 0) {
             caption= message.getCaption();
-            if (caption.isEmpty()) {
+            if (caption==null || caption.isEmpty()) {
                 caption = text.trim();
             }
 
