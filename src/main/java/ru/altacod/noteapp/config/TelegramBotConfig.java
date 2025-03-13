@@ -7,23 +7,28 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+import ru.altacod.noteapp.service.ProjectService;
 
 @Configuration
 public class TelegramBotConfig {
 
     private final UserRepository userRepository;  // 👈 Добавляем зависимость
+    private final ProjectService projectService;
 
-    public TelegramBotConfig(UserRepository userRepository,
+    public TelegramBotConfig(UserRepository userRepository, ProjectService projectService,
                              @Value("${telegram.bot.token}") String botToken,
                              @Value("${telegram.bot.username}") String botUsername) {
         this.userRepository = userRepository;
+        this.projectService = projectService;
         this.botToken = botToken;
         this.botUsername = botUsername;
+
     }
 
     @Bean
     public NoteBot noteBot(TelegramBotsApi telegramBotsApi) throws Exception {
-        NoteBot bot = new NoteBot(userRepository ,botToken, botUsername);
+        String projectId = null;
+        NoteBot bot = new NoteBot(userRepository ,botToken, botUsername, projectService);
         telegramBotsApi.registerBot(bot);
         return bot;
     }

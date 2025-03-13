@@ -370,14 +370,17 @@ public class NoteController {
             note.setUserId(userId);
             note.setCreatedAt(LocalDateTime.now());
             note.setChangedAt(LocalDateTime.now());
-            note.setProjectId(projectService.getDefaultBotProjectForUser(userId).getId());
-
+            if(requestBody.get("projectId")==null) {
+                note.setProjectId(projectService.getDefaultBotProjectForUser(userId).getId());
+            }else {
+                UUID projectId=UUID.fromString(requestBody.get("projectId").toString());
+                note.setProjectId(projectId);
+            }
 
             note.getTags().add("telegram");
 
             // сохраняем пока без файлов
-//            Note savedNote = noteService.saveMixedNote(note, userId);
-//            note.setId(savedNote.getId());
+//
 
             // Сохранение файлов
 

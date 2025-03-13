@@ -49,6 +49,7 @@ public class User {
     @Column(name = "color_theme", nullable = false)
     private boolean colorTheme;  // Темная/светлая тема
 
+
     @Column(name = "ask_project_before_save", nullable = false)
     private boolean askProjectBeforeSave = false; // По умолчанию выключено
 
@@ -142,11 +143,12 @@ public void setAvatar(byte[] avatar) {
         this.colorTheme = colorTheme;
     }
 
-    public boolean getTelegramChatId() {return telegramChatId != null;
+    public String getTelegramChatId() {return telegramChatId;
 
     };
 
     public void setTelegramChatId(String chatId) {
+        this.telegramChatId = chatId;
     };
 
     public boolean isEnabled() {
@@ -155,5 +157,21 @@ public void setAvatar(byte[] avatar) {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+
+    public boolean isAskProjectBeforeSave() {
+        return askProjectBeforeSave;
+    }
+
+    public void setAskProjectBeforeSave(boolean askProjectBeforeSave) {
+        this.askProjectBeforeSave = askProjectBeforeSave;
     }
 }

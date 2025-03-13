@@ -94,4 +94,25 @@ public class ProjectService {
         dto.setNoteCount(project.getNotes().size()); // Подсчет количества заметок
         return dto;
     }
+
+    public List<Project> getAllProjectsForUser(UUID userId) {
+        List<Project> foundedProjects = new ArrayList<>();
+        foundedProjects=projectRepository.findAllByUserId(userId);
+        System.out.println("Нашлись проекты: "+foundedProjects);
+        return foundedProjects;
+    }
+    @Transactional
+    public Project updateProject(UUID id, ProjectDTO projectDTO) {
+        UUID userId = getCurrentUserId();
+        Project existingProject = projectRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Проект не найден или доступ запрещён"));
+
+        existingProject.setName(projectDTO.getName());
+        existingProject.setDescription(projectDTO.getDescription());
+        existingProject.setColor(projectDTO.getColor());
+        existingProject.setPosition(projectDTO.getPosition());
+        existingProject.setDefault(projectDTO.isDefault());
+
+        return projectRepository.save(existingProject);
+    }
 }

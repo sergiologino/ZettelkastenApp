@@ -91,6 +91,7 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
 
+
         user.setUsername(updatedUser.getUsername());
         user.setEmail(updatedUser.getEmail());
         if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
@@ -98,6 +99,7 @@ public class UserService {
         }
         user.setTlgUsername(updatedUser.getTlgUsername());
         user.setPhoneNumber(updatedUser.getPhoneNumber());
+        user.setAskProjectBeforeSave(updatedUser.isAskProjectBeforeSave());
 
         userRepository.save(user);
     }

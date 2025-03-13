@@ -1,5 +1,12 @@
 package ru.altacod.noteapp.bot;
 
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.transaction.annotation.Transactional;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import ru.altacod.noteapp.model.Project;
 import ru.altacod.noteapp.model.User;
 import ru.altacod.noteapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +18,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import ru.altacod.noteapp.service.ProjectService;
 
 import java.io.File;
 import java.io.InputStream;
@@ -27,6 +35,7 @@ public class NoteBot extends TelegramLongPollingBot {
 
     private final UserRepository userRepository;
     private final RestTemplate restTemplate = new RestTemplate();
+    private final ProjectService projectService;
 
     @Value("${telegram.bot.token}")
     private String botToken;
@@ -34,10 +43,15 @@ public class NoteBot extends TelegramLongPollingBot {
     @Value("${telegram.bot.username}")
     private String botUsername;
 
+    private final Map<String, Message> projectSelectionCache = new HashMap<>();
 
 
-    public NoteBot(UserRepository userRepository, String botToken, String botUsername) {
+
+
+
+    public NoteBot(UserRepository userRepository, String botToken, String botUsername, ProjectService projectService) {
         this.userRepository = userRepository;
+        this.projectService = projectService;
         this.botToken = botToken;
         this.botUsername = botUsername;
     }
@@ -64,8 +78,10 @@ public class NoteBot extends TelegramLongPollingBot {
         return botToken;
     }
 
+    @Transactional
     @Override
     public void onUpdateReceived(Update update) {
+
         if (update.hasMessage()) {
             Message message = update.getMessage();
             String chatId = message.getChatId().toString();
@@ -83,18 +99,123 @@ public class NoteBot extends TelegramLongPollingBot {
             User user = userOptional.get();
 
             // Если у пользователя еще нет Telegram chatId — сохраняем его
-            if (Objects.isNull(user.getTelegramChatId())) {  // ✅ Если поле chatID  у пользака не заполнено то заполняем
-               user.setTelegramChatId(chatId);
-                userRepository.save(user);
+            if (user.getTelegramChatId() == null || user.getTelegramChatId().isEmpty()) {
+                user.setTelegramChatId(chatId);
+                user = userRepository.saveAndFlush(user); // Принудительно фиксируем изменения
             }
-                handleMixedMessage(message, user);
+//
+            // вставка
+            if (user.isAskProjectBeforeSave()) {
+                sendProjectSelection(chatId, message, user);
+            } else {
+                UUID projectMock =null;
+                handleMixedMessage(message, user, projectMock);
+            }
+        } else if (update.hasCallbackQuery()) {
+            handleCallbackQuery(update.getCallbackQuery());
+        }
+
+
+    }
+    private void handleCallbackQuery(CallbackQuery callbackQuery) {
+        String chatId = callbackQuery.getMessage().getChatId().toString();
+        String data = callbackQuery.getData();
+
+        if (data.startsWith("PRJ_")) {
+            String[] parts = data.split("_", 3); // ✅ Разбиваем на 3 части, чтобы избежать проблем с UUID
+            if (parts.length < 3) {
+                sendResponse(chatId, "Ошибка: некорректные данные выбора проекта.");
+                return;
+            }
+            String selectionKey  = parts[1]; // Получаем selectionKey - ключ заметки
+            String projectIdStr  = parts[2]; // Полный UUID проекта
+
+
+            Optional<User>  optionalUser = userRepository.findByTelegramChatId(chatId);
+                    if (optionalUser.isEmpty()) {
+                        // Если chatId не найден, пробуем найти по ID
+                        sendResponse(chatId, "Ошибка: пользователь не найден.");
+                        return;
+                    };
+            User user = optionalUser.get();
+
+
+            // Получаем сохраненный текст заметки
+            Message originalMessage = projectSelectionCache.get(selectionKey);
+            if (originalMessage == null) {
+                sendResponse(chatId, "Ошибка: исходное сообщение не найдено. Попробуйте снова.");
+                return;
+            }
+            projectSelectionCache.remove(selectionKey); // Удаляем запись после использования
+
+          // Найти полный projectId по его укороченной версии
+            // ✅ Преобразуем `projectIdStr` в `UUID`
+            UUID projectId;
+            try {
+                projectId = UUID.fromString(projectIdStr);
+            } catch (IllegalArgumentException e) {
+                sendResponse(chatId, "Ошибка: некорректный идентификатор проекта.");
+                return;
+            }
+            // ✅ Получаем название проекта
+            Project selectedProject = projectService.getProjectById(projectId, user.getId());
+
+            // ✅ Удаляем клавиатуру (редактируем предыдущее сообщение)
+            removeInlineKeyboard(callbackQuery.getMessage());
+
+            // ✅ Отправляем подтверждающее сообщение
+            sendResponse(chatId, "✅ Размещено в **" + selectedProject.getName() + "**");
+
+            // ✅ Передаем исходное сообщение и проект в обработчик
+            handleMixedMessage(originalMessage, user, projectId);
+        }
+    }
+    private void removeInlineKeyboard(Message message) {
+        EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
+        editMarkup.setChatId(message.getChatId().toString());
+        editMarkup.setMessageId(message.getMessageId());
+        editMarkup.setReplyMarkup(null); // Убираем клавиатуру
+
+        try {
+            execute(editMarkup);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+    private void sendProjectSelection(String chatId, Message message, User user) {
+        List<Project> projects = projectService.getAllProjectsForUser(user.getId());
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>(); // ✅ исправлено
+
+        // Генерируем уникальный ключ
+        String selectionKey = UUID.randomUUID().toString().substring(0, 8);
+        projectSelectionCache.put(selectionKey, message); // Сохраняем заметку в памяти
+
+        for (Project project : projects) {
+            InlineKeyboardButton button = new InlineKeyboardButton();
+            button.setText(project.getName());
+            button.setCallbackData("PRJ_" + selectionKey + "_" + project.getId()); // ✅ Передаем полный UUID проекта
+            keyboard.add(Collections.singletonList(button)); // ✅ исправлено
+        }
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(keyboard); // ✅ исправлено
+
+        SendMessage responseMessage  = new SendMessage(chatId, "Выберите проект для заметки:");
+        responseMessage.setReplyMarkup(markup);
+        try {
+            execute(responseMessage); // Используем стандартный метод API Telegram
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
         }
     }
 
     // Обработка смешанного сообщения
 
 
-    private void handleMixedMessage(Message message, User user) {
+    private void handleMixedMessage(Message message, User user, UUID projectId) {
         String chatId = message.getChatId().toString();
         String text = message.hasText() ? message.getText() : null;
         List<String> links = new ArrayList<>();
@@ -158,6 +279,7 @@ public class NoteBot extends TelegramLongPollingBot {
                 fileData.put("createdAt", LocalDateTime.now());
                 noteFiles.add(fileData);
             }
+
         }
         String caption="";
         if (noteFiles!= null && noteFiles.size() > 0) {
@@ -168,8 +290,9 @@ public class NoteBot extends TelegramLongPollingBot {
 
         }
 
+
         // Отправка на бэкенд
-        sendMixedNoteToBackend(caption, text, links, audioFiles, noteFiles, user);
+        sendMixedNoteToBackend(caption, text, links, audioFiles, noteFiles, user, projectId);
         sendResponse(chatId, "Сообщение обработано.");
     }
 
@@ -177,7 +300,8 @@ public class NoteBot extends TelegramLongPollingBot {
     private void sendMixedNoteToBackend(String caption, String content, List<String> links,
                                         List<Map<String, Object>> audioFiles,
                                         List<Map<String, Object>> noteFiles,
-                                        User user) {
+                                        User user,
+                                        UUID projectId) {
         try {
             RestTemplate restTemplate = new RestTemplate();
             Map<String, Object> requestBody = new HashMap<>();
@@ -198,6 +322,9 @@ public class NoteBot extends TelegramLongPollingBot {
             if (!audioFiles.isEmpty()) requestBody.put("audios", audioFiles);
             if (!noteFiles.isEmpty()) requestBody.put("files", noteFiles);
             requestBody.put("userId", user.getId().toString());
+            if(!(projectId ==null)){
+                requestBody.put("projectId", projectId.toString());
+            }
 
             restTemplate.postForEntity(
                     "http://localhost:8080/api/notes/mixed",
@@ -245,6 +372,7 @@ public class NoteBot extends TelegramLongPollingBot {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText(response);
+        message.enableMarkdown(true); // Поддержка **жирного** текста
         try {
             execute(message);
         } catch (TelegramApiException e) {

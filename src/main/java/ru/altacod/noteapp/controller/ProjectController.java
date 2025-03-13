@@ -1,5 +1,7 @@
 package ru.altacod.noteapp.controller;
 
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.http.HttpStatus;
 import ru.altacod.noteapp.dto.ProjectDTO;
 import ru.altacod.noteapp.mapper.NoteConverter;
 import ru.altacod.noteapp.model.Project;
@@ -65,6 +67,8 @@ public class ProjectController {
         return responseProject;
     }
 
+
+
     @Operation(summary = "Создать новый проект", description = "Создает новый проект с указанным названием и описанием.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Проект успешно создан",
@@ -79,6 +83,25 @@ public class ProjectController {
         System.out.println(" Вызван createProject с данными: " + project.getName());
         Project createdProject = projectService.saveProject(project);
         return ResponseEntity.ok(createdProject);
+    }
+
+    @Operation(summary = "Обновить проект", description = "Обновляет данные существующего проекта.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Проект успешно обновлен"),
+            @ApiResponse(responseCode = "404", description = "Проект не найден"),
+            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
+    })
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateProject(@PathVariable UUID id, @RequestBody ProjectDTO projectDTO) {
+        try {
+            projectService.updateProject(id, projectDTO);
+            return ResponseEntity.ok("Проект успешно обновлён.");
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Ошибка при обновлении проекта: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "Удалить проект", description = "Удаляет проект по указанному идентификатору.")
@@ -101,6 +124,13 @@ public class ProjectController {
         projectService.deleteProjectById(project.getId());
 
         return ResponseEntity.noContent().build();
+    }
+    // получение проектов пользака для бота телеги
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<ProjectDTO>> getUserProjects(@PathVariable UUID userId) {
+        List<Project> projects = projectService.getAllProjectsForUser(userId);
+        List<ProjectDTO> projectDTOs = projects.stream().map(projectService::convertToDto).collect(Collectors.toList());
+        return ResponseEntity.ok(projectDTOs);
     }
 
 }

@@ -59,20 +59,7 @@ public class UserController {
         }
         return ResponseEntity.ok(response);
     }
-//    @PutMapping("/{userId}/avatar")
-//    public ResponseEntity<String> uploadAvatar(@PathVariable UUID userId, @RequestParam("avatar") MultipartFile avatarFile) {
-//        try {
-//            User user = userRepository.findById(userId)
-//                    .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
-//
-//            user.setAvatar(avatarFile.getBytes());
-//            userRepository.save(user);
-//
-//            return ResponseEntity.ok("Аватар успешно обновлен");
-//        } catch (IOException e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ошибка загрузки аватара");
-//        }
-//    }
+
 
     @PostMapping("/sync")
     public ResponseEntity<String> syncUser(@RequestBody User user) {

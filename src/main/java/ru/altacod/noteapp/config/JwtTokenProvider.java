@@ -66,7 +66,7 @@ public class JwtTokenProvider {
     public String getUserIdFromToken(String token) {
         try {
             Claims claims = getAllClaimsFromToken(token);
-            System.out.println("Claims в токене: " + claims);
+//            System.out.println("Claims в токене: " + claims);
             return claims.getSubject();
         } catch (Exception e) {
 //            System.out.println("Ошибка извлечения username из токена: " + e.getMessage());
