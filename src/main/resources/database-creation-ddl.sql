@@ -21,6 +21,7 @@ CREATE TABLE  IF NOT EXISTS public.users (
     avatar bytea,
     avatar_url VARCHAR(255),
     telegram_chat_id VARCHAR(255) UNIQUE,
+    ask_project_before_save boolean NOT null DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -116,6 +117,10 @@ CREATE TABLE  IF NOT EXISTS public.open_graph_data (
 	CONSTRAINT fk7c8yqk0e2ae540myuarcun98p FOREIGN KEY (note_id) REFERENCES public.notes(id),
 	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+ALTER TABLE open_graph_data
+DROP CONSTRAINT fk7c8yqk0e2ae540myuarcun98p,
+ADD CONSTRAINT fk7c8yqk0e2ae540myuarcun98p
+FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE;
 
 
 -- public.note_audios определение
@@ -174,6 +179,7 @@ CREATE TABLE  IF NOT exists public.note_tags (
 	FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE,
     FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
 );
+
 
 CREATE INDEX idx_user_notes ON notes(user_id);
 CREATE INDEX idx_user_projects ON projects(user_id);

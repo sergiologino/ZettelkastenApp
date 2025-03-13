@@ -4,7 +4,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.6"
 }
 
-group = "com.example"
+group = "ru.altacod"
 version = "0.0.1-SNAPSHOT"
 
 java {
@@ -30,7 +30,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.security:spring-security-oauth2-jose")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.3")
     implementation("org.telegram:telegrambots-spring-boot-starter:6.5.0")
     implementation("javax.servlet:javax.servlet-api:4.0.1")
     // https://mvnrepository.com/artifact/org.jsoup/jsoup
