@@ -985,7 +985,7 @@ public class NoteService {
     public List<Note> getNotesByTags(List<String> tags) {
         UUID userId = getCurrentUserId();
         List<Note> foundedNotes = noteRepository.findNotesByTagsAndUserId(tags, userId);
-        System.out.println("Найденные заметки: " + foundedNotes);
+//        System.out.println("Найденные заметки: " + foundedNotes);
 
         // Оставляем только заметки, содержащие все тэги
         List<Note> filteredNotes = foundedNotes.stream()
@@ -996,7 +996,7 @@ public class NoteService {
                 .collect(Collectors.toList());
 
 
-        System.out.println("Отобранные заметки: "+filteredNotes);
+//        System.out.println("Отобранные заметки: "+filteredNotes);
         return filteredNotes;
 
     }

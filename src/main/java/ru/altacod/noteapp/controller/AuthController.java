@@ -58,14 +58,14 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "Авторизация пользователя", description = "Авторизация пользователя и выдача токенов")
     public ResponseEntity<Map<String, String>> login(@RequestBody User user) {
-        System.out.println("Попытка авторизации: " + user.getUsername());
-        System.out.println("Введенный пароль: " + user.getPassword());
+//        System.out.println("Попытка авторизации: " + user.getUsername());
+//        System.out.println("Введенный пароль: " + user.getPassword());
 
         return userService.findByUsername(user.getUsername())
                 .map(u -> {
-                    System.out.println("Проверяем пароль: " + user.getPassword());
-                    System.out.println("Пароль из БД: " + u.getPassword());
-                    System.out.println("Совпадает ли пароль? " + passwordEncoder.matches(user.getPassword(), u.getPassword()));
+//                    System.out.println("Проверяем пароль: " + user.getPassword());
+//                    System.out.println("Пароль из БД: " + u.getPassword());
+//                    System.out.println("Совпадает ли пароль? " + passwordEncoder.matches(user.getPassword(), u.getPassword()));
 
                     if (!passwordEncoder.matches(user.getPassword(), u.getPassword())) {
                         return ResponseEntity.status(401).body(Collections.singletonMap("error", "Неверный логин или пароль"));
@@ -76,9 +76,9 @@ public class AuthController {
                     Map<String, String> tokens = new HashMap<>();
                     tokens.put("accessToken", accessToken);
                     tokens.put("refreshToken", refreshToken);
-                    System.out.println("Пароль, который пришел: " + user.getPassword());
-                    System.out.println("Пароль из БД: " + u.getPassword());
-                    System.out.println("Пароли совпадают? " + passwordEncoder.matches(user.getPassword(), u.getPassword()));
+//                    System.out.println("Пароль, который пришел: " + user.getPassword());
+//                    System.out.println("Пароль из БД: " + u.getPassword());
+//                    System.out.println("Пароли совпадают? " + passwordEncoder.matches(user.getPassword(), u.getPassword()));
                     return ResponseEntity.ok(tokens);
                 })
                 .orElse(ResponseEntity.status(401).build());
@@ -98,12 +98,12 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> initiateYandexOAuth() {
 
         String state = Base64.getEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
-        System.out.println("Сгенерированное state (до сохранения): " + state);
+//        System.out.println("Сгенерированное state (до сохранения): " + state);
         stateStore.put(state, "valid"); // Сохраняем state в памяти
         Map<String, String> response = new HashMap<>();
         response.put("state", state);
 
-        System.out.println("Инициализация OAuth с Яндекс, stateStore: " + stateStore);
+//        System.out.println("Инициализация OAuth с Яндекс, stateStore: " + stateStore);
 
         return ResponseEntity.ok(response);
     }
@@ -182,7 +182,7 @@ public class AuthController {
 
         // 🛑 Проверяем, есть ли пользователь в БД перед синхронизацией
         if (userService.findByUsername(userDTO.getUsername()).isPresent()) {
-            System.out.println("ОБНАРУЖЕН ПОЛЬЗОВАТЕЛЬ! " + userDTO.getUsername());
+//            System.out.println("ОБНАРУЖЕН ПОЛЬЗОВАТЕЛЬ! " + userDTO.getUsername());
             return ResponseEntity.badRequest().body("Пользователь уже существует.");
         }
         String hashedPassword = passwordEncoder.encode(userDTO.getPassword());
@@ -198,7 +198,7 @@ public class AuthController {
 
 
         ResponseEntity<String> response = syncUser(user);
-        System.out.println("Ответ syncUser: " + response.getStatusCode());
+//        System.out.println("Ответ syncUser: " + response.getStatusCode());
 
         if (!response.getStatusCode().is2xxSuccessful()) {
             return ResponseEntity.status(response.getStatusCode()).body("Ошибка при синхронизации с приложением.");
@@ -214,16 +214,16 @@ public class AuthController {
     @PostMapping("/sync")
         public ResponseEntity<String> syncUser(@RequestBody User user) {
 //          Убираем проверку, потому что она уже есть в `register()`
-        System.out.println("Синхронизация данных пользователя: " + user.getUsername());
+//        System.out.println("Синхронизация данных пользователя: " + user.getUsername());
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication != null) {
             String currentUser = authentication.getName();
-            System.out.println("Пользователь, выполняющий синхронизацию: " + currentUser);
+//            System.out.println("Пользователь, выполняющий синхронизацию: " + currentUser);
         } else {
             userService.registerUser(user);
-            System.out.println("✅ Новый пользователь зарегистрирован в syncUser.");
+//            System.out.println("✅ Новый пользователь зарегистрирован в syncUser.");
 
 
             // ❌ Не вызываем `userService.registerUser(user)`, он уже сохранён!
