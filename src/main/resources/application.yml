@@ -31,9 +31,9 @@ spring:
 
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/note_app_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
       ddl-auto: update
@@ -81,8 +81,8 @@ integration:
 
 telegram:
   bot:
-    token: ${TELEGRAM_BOT_TOKEN}
-    username: ${TELEGRAM_BOT_USERNAME}
+    token: ${TELEGRAM_BOT_TOKEN:7645020182:AAESVweSGS_n7ZbxFx3NNRE4YmrvZ6HsXvg}
+    username: ${TELEGRAM_BOT_USERNAME:AltaBrain_bot}
 logging:
   threshold:
     console: INFO
@@ -101,16 +101,16 @@ logging:
             sql:
               BasicBinder: info
 file:
-  storage-path: ${FILE_STORAGE_PATH}
+  storage-path: ${FILE_STORAGE_PATH:/data/files}
 audio:
-  storage-path: ${AUDIO_STORAGE_PATH}
+  storage-path: ${AUDIO_STORAGE_PATH:/data/audio}
   storage-public-path: /files
   storage-directory: E:/uploaded
 open-graph-data:
   enabled: true
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:e0ccMN3fqRE30HcE6Me2xnGF88e1xVrGwNndNzTd}
   expiration:
     access: 3600000  # 1 ???
     refresh: 86400000  # 1 ????
