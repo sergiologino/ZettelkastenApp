@@ -8,13 +8,13 @@ spring:
       client:
         registration:
           yandex:
-            client-id: a0bc7b7381a84739be01111f12d9447e
-            client-secret: c0701b6fad07403c8a8b6f9e99874e1f
+            client-id: ${YANDEX_CLIENT_ID}
+            client-secret: ${YANDEX_CLIENT_SECRET}
             scope:
               - login
               - email
             authorization-grant-type: authorization_code
-            redirect-uri: "http://localhost:8081/login/oauth2/code/yandex"  # "{baseUrl}/login/oauth2/code/yandex"
+            redirect-uri: "${BASE_URL}/login/oauth2/code/yandex"
             client-name: Yandex
         provider:
           yandex:

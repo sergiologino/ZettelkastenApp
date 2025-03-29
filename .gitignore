@@ -4,9 +4,13 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-
+!build/libs
+!build/libs/*.jar  # Исключаем jar файлы из общего правила
+!*/build/libs/*.jar  # Исключаем jar файлы для всех поддиректорий
+.env
 ### STS ###
 .apt_generated
+.database-creation-ddl.sql
 .classpath
 .factorypath
 .project
