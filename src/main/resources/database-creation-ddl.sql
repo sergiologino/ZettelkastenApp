@@ -21,6 +21,7 @@ CREATE TABLE  IF NOT EXISTS public.users (
     avatar bytea,
     avatar_url VARCHAR(255),
     telegram_chat_id VARCHAR(255) UNIQUE,
+    board_scale int8,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
