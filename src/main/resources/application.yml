@@ -26,14 +26,14 @@ spring:
       encoder-strength: 12
   servlet:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 150MB
+      max-file-size: ${MAX_FILE_SIZE}
+      max-request-size: ${MAX_REQUEST_SIZE}
 
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/note_app_db}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
@@ -42,7 +42,7 @@ spring:
       hibernate:
         format_sql: true
 server:
-  port: 8080
+  port: ${SERVER_PORT}
   security:
     user:
       name: admin
@@ -81,8 +81,8 @@ integration:
 
 telegram:
   bot:
-    token: ${TELEGRAM_BOT_TOKEN:7645020182:AAESVweSGS_n7ZbxFx3NNRE4YmrvZ6HsXvg}
-    username: ${TELEGRAM_BOT_USERNAME:AltaBrain_bot}
+    token: ${TELEGRAM_BOT_TOKEN}
+    username: ${TELEGRAM_BOT_USERNAME}
 logging:
   threshold:
     console: INFO
@@ -101,17 +101,17 @@ logging:
             sql:
               BasicBinder: info
 file:
-  storage-path: ${FILE_STORAGE_PATH:/data/files}
+  storage-path: ${FILE_STORAGE_PATH}
 audio:
-  storage-path: ${AUDIO_STORAGE_PATH:/data/audio}
+  storage-path: ${AUDIO_STORAGE_PATH}
   storage-public-path: /files
-  storage-directory: E:/uploaded
+  storage-directory: ${STORAGE_DIRECTORY}
 open-graph-data:
   enabled: true
 
 jwt:
-  secret: ${JWT_SECRET:e0ccMN3fqRE30HcE6Me2xnGF88e1xVrGwNndNzTd}
+  secret: ${JWT_SECRET}
   expiration:
-    access: 3600000  # 1 ???
-    refresh: 86400000  # 1 ????
+    access: ${EXPIRATION_TOKEN_ACCESS}
+    refresh: ${EXPIRATION_TOKEN_REFRESH}
 
