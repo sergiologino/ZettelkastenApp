@@ -1,0 +1,12 @@
+.gradle
+build
+out
+**/*.iml
+.idea
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+target
+.DS_Store
