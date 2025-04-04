@@ -1,21 +1,3 @@
-## Используем официальный образ OpenJDK 17 с минимальным размером
-#FROM openjdk:17-jdk-slim
-#
-## Указываем рабочую директорию внутри контейнера
-#WORKDIR /app
-#
-## Копируем JAR-файл приложения в контейнер
-#COPY build/libs/noteapp.jar app.jar
-#
-## Открываем порт 8080 для работы приложения
-#EXPOSE 8080
-#
-## Запуск приложения с использованием переменных окружения
-#ENTRYPOINT ["java", "-jar", "app.jar"]
-
-# syntax=docker/dockerfile:1
-
-# --- Этап сборки ---
 FROM gradle:8.5-jdk17-alpine AS build
 WORKDIR /app
 
