@@ -43,7 +43,7 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 server:
-  port: ${PORT}
+  port: ${PORT:8080}
   security:
     user:
       name: admin
