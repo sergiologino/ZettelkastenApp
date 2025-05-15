@@ -43,6 +43,9 @@ public class NoteBot extends TelegramLongPollingBot {
     @Value("${telegram.bot.username}")
     private String botUsername;
 
+    @Value("${backend.url}")
+    private String backendUrl;
+
     private final Map<String, Message> projectSelectionCache = new HashMap<>();
 
 
@@ -81,42 +84,58 @@ public class NoteBot extends TelegramLongPollingBot {
     @Transactional
     @Override
     public void onUpdateReceived(Update update) {
-
         if (update.hasMessage()) {
             Message message = update.getMessage();
             String chatId = message.getChatId().toString();
-            String username = message.getFrom().getUserName(); // Telegram username
-            String text = message.getText();
 
-            // Ищем пользователя по Telegram username
-            Optional<User> userOptional = userRepository.findByTlgUsername(username.replace("@", ""));
+            // 🔐 Проверка: является ли сообщение пересланным
+            boolean isForwarded = message.getForwardFrom() != null
+                    || message.getForwardFromChat() != null
+                    || message.getForwardSenderName() != null;
+
+            if (isForwarded) {
+                sendResponse(chatId, "⚠️ Пересланные сообщения не поддерживаются. Пожалуйста, отправьте сообщение напрямую.");
+                return;
+            }
+
+            String username = message.getFrom().getUserName();
+
+            // 🔎 Поиск пользователя по username или по chatId
+            Optional<User> userOptional = Optional.empty();
+            if (username != null && !username.isEmpty()) {
+                userOptional = userRepository.findByTlgUsername(username.replace("@", ""));
+            }
 
             if (userOptional.isEmpty()) {
-                sendResponse(chatId, "Ошибка: Ваш Telegram-аккаунт не привязан к системе. Укажите в профиле в поле 'Telegram username' имя пользователя из telegram ");
+                userOptional = userRepository.findByTelegramChatId(chatId);
+            }
+
+            if (userOptional.isEmpty()) {
+                sendResponse(chatId, "❌ Ошибка: ваш Telegram-аккаунт не привязан. Укажите Telegram username в профиле.");
                 return;
             }
 
             User user = userOptional.get();
 
-            // Если у пользователя еще нет Telegram chatId — сохраняем его
+            // Сохраняем chatId, если его ещё нет
             if (user.getTelegramChatId() == null || user.getTelegramChatId().isEmpty()) {
                 user.setTelegramChatId(chatId);
-                user = userRepository.saveAndFlush(user); // Принудительно фиксируем изменения
+                userRepository.saveAndFlush(user);
             }
-//
-            // вставка
+
+            // 🔀 Обработка: выбор проекта или сразу создаём заметку
             if (user.isAskProjectBeforeSave()) {
                 sendProjectSelection(chatId, message, user);
             } else {
-                UUID projectMock =null;
+                UUID projectMock = null;
                 handleMixedMessage(message, user, projectMock);
             }
+
         } else if (update.hasCallbackQuery()) {
             handleCallbackQuery(update.getCallbackQuery());
         }
-
-
     }
+
     private void handleCallbackQuery(CallbackQuery callbackQuery) {
         String chatId = callbackQuery.getMessage().getChatId().toString();
         String data = callbackQuery.getData();
@@ -223,19 +242,18 @@ public class NoteBot extends TelegramLongPollingBot {
         List<Map<String, Object>> noteFiles = new ArrayList<>();
 
         // Разбор текста на ссылки
+        StringBuilder contentBuilder = new StringBuilder();
         if (text != null) {
             String[] words = text.split("\\s+");
-            StringBuilder contentBuilder = new StringBuilder();
             for (String word : words) {
                 if (word.startsWith("http://") || word.startsWith("https://")) {
                     links.add(word.trim());
-
                 } else {
                     contentBuilder.append(word).append(" ");
                 }
             }
-            text = contentBuilder.toString().trim();
         }
+        text = contentBuilder.toString().trim();
 
 
         // Загрузка голосовых сообщений
@@ -281,6 +299,8 @@ public class NoteBot extends TelegramLongPollingBot {
             }
 
         }
+
+        // 📝 Подпись (если есть)
         String caption="";
         if (noteFiles!= null && noteFiles.size() > 0) {
             caption= message.getCaption();
@@ -292,7 +312,14 @@ public class NoteBot extends TelegramLongPollingBot {
 
 
         // Отправка на бэкенд
-        sendMixedNoteToBackend(caption, text, links, audioFiles, noteFiles, user, projectId);
+        sendMixedNoteToBackend(
+                caption != null ? caption : "Новая заметка из Telegram",
+                text,
+                links,
+                audioFiles,
+                noteFiles,
+                user,
+                projectId);
         sendResponse(chatId, "Сообщение обработано.");
     }
 
@@ -326,8 +353,9 @@ public class NoteBot extends TelegramLongPollingBot {
                 requestBody.put("projectId", projectId.toString());
             }
 
+            String url = backendUrl + "/api/notes/mixed";
             restTemplate.postForEntity(
-                    "http://localhost:8080/api/notes/mixed",
+                    url,
                     requestBody,
                     String.class
             );

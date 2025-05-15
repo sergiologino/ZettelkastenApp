@@ -3,12 +3,14 @@ package ru.altacod.noteapp.config;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -57,6 +59,7 @@ public class SecurityConfig {
 //                        .requestMatchers("/api/projects").authenticated()  // ✅ Доступ только авторизованным
                         .requestMatchers("/api/notes").authenticated()  // ✅ Доступ только авторизованным
                         .anyRequest().authenticated()
+
                 )
                 .anonymous(anonymous -> anonymous.disable()) // 💡 Отключаем анонимную аутентификацию
 
@@ -66,6 +69,9 @@ public class SecurityConfig {
                             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Доступ запрещён");
                         }))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(handling -> handling
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                )
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/oauth2/authorization/yandex") // Настройка Yandex OAuth2
                         .defaultSuccessUrl("/dashboard")
@@ -93,9 +99,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("http://*");
-        configuration.addAllowedOrigin("https://*"); // Разрешить локальный  фронтенд и все https
-        configuration.addAllowedOriginPattern("*");
+//        configuration.addAllowedOrigin("http://*");
+//        configuration.addAllowedOrigin("https://*"); // Разрешить локальный  фронтенд и все https
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
