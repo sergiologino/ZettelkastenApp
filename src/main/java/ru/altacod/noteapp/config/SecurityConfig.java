@@ -104,7 +104,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 //        configuration.addAllowedOrigin("http://*");
 //        configuration.addAllowedOrigin("https://*"); // Разрешить локальный  фронтенд и все https
-        configuration.setAllowedOriginPatterns(List.of("http://sergiologino-note-app-new-design-eaa6.twc1.net:*","https://altanote.ru"));
+        configuration.setAllowedOriginPatterns(List.of("https://sergiologino-note-app-new-design-eaa6.twc1.net:*","https://altanote.ru"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
