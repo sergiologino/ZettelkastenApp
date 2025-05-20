@@ -31,9 +31,9 @@ spring:
 
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/note_app_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
       ddl-auto: update
@@ -43,7 +43,7 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 server:
-  port: ${SERVER_PORT}
+  port: ${PORT:8080}
   security:
     user:
       name: admin
@@ -58,8 +58,8 @@ server:
       tracking-modes: cookie
     multipart:
       enabled: true
-      max-file-size: 200MB
-      max-request-size: 250MB
+      max-file-size: ${MAX_FILE_SIZE}
+      max-request-size: ${MAX_REQUEST_SIZE}
   mvc:
     dispatcherServlet:
       throw-exception-if-no-handler-found: true
@@ -115,4 +115,8 @@ jwt:
   expiration:
     access: ${EXPIRATION_TOKEN_ACCESS}
     refresh: ${EXPIRATION_TOKEN_REFRESH}
+
+backend:
+  url: ${BASE_URL}
+
 

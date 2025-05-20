@@ -27,6 +27,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String requestURI = request.getRequestURI();
 //        System.out.println("Запрос: " + requestURI);
 
+        // Разрешаем без проверки токена логин, регистрацию и другие открытые запросы
+        if (requestURI.startsWith("/api/auth/register") ||
+                requestURI.startsWith("/api/auth/login") ||
+                requestURI.startsWith("/api/auth/sync")) {
+
+            chain.doFilter(request, response);
+            return;
+        }
+
+
         // Разрешить запросы без токена для регистрации и логина
         String authHeader = null; // 💡 ГАРАНТИРОВАННО ОБЪЯВЛЯЕМ ЗАРАНЕЕ
 

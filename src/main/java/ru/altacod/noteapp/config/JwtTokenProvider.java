@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -66,10 +67,10 @@ public class JwtTokenProvider {
     public String getUserIdFromToken(String token) {
         try {
             Claims claims = getAllClaimsFromToken(token);
-//            System.out.println("Claims в токене: " + claims);
+            System.out.println("Claims в токене: " + claims);
             return claims.getSubject();
         } catch (Exception e) {
-//            System.out.println("Ошибка извлечения username из токена: " + e.getMessage());
+            System.out.println("Ошибка извлечения claims из токена: " + e.getMessage());
             return null;
         }
     }
@@ -77,6 +78,7 @@ public class JwtTokenProvider {
 
     // Получение username из токена
     public String getUsernameFromToken(String token) {
+        if (StringUtils.isEmpty(token)) return null;  // защита
         return getClaimFromToken(token, Claims::getSubject);
     }
 
