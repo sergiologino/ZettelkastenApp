@@ -40,6 +40,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
 //                .cors(withDefaults())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -55,12 +56,11 @@ public class SecurityConfig {
                                 "/api/auth/**"
 
                         ).permitAll()
-                        .requestMatchers("/api/projects/**").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // Разрешаем preflight-запросы
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/notes/mixed").permitAll() // Разрешить запрос
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/notes/text").permitAll() // Разрешить запрос
-//                        .requestMatchers("/api/projects").authenticated()  // ✅ Доступ только авторизованным
                         .requestMatchers("/api/notes").authenticated()  // ✅ Доступ только авторизованным
+                        .requestMatchers("/api/projects/**").authenticated()
                         .anyRequest().authenticated()
 
                 )
@@ -104,7 +104,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 //        configuration.addAllowedOrigin("http://*");
 //        configuration.addAllowedOrigin("https://*"); // Разрешить локальный  фронтенд и все https
-        configuration.setAllowedOriginPatterns(List.of("https://sergiologino-note-app-new-design-eaa6.twc1.net:*","https://altanote.ru"));
+        configuration.setAllowedOriginPatterns(List.of("https://sergiologino-note-app-new-design-eaa6.twc1.net","https://altanote.ru"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -120,8 +120,7 @@ public class SecurityConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("http://*")
-                        .allowedOrigins("https://*")
+                        .allowedOrigins("https://sergiologino-note-app-new-design-eaa6.twc1.net")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
             }
         };
