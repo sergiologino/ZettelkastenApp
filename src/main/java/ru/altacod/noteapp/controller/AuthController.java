@@ -32,11 +32,11 @@ import org.springframework.web.client.RestTemplate;
 
 @RestController
 @RequestMapping("/api/auth")
-//@CrossOrigin(origins = {
-//        "http://localhost:3000",
-//        "https://sergiologino-note-app-new-design-eaa6.twc1.net",
-//        "https://altanote.ru"
-//})
+@CrossOrigin(origins = {
+        "http://localhost:3000",
+        "https://sergiologino-note-app-new-design-eaa6.twc1.net",
+        "https://altanote.ru"
+})
 @Tag(name = "Auth API", description = "API для регистрации и авторизации")
 public class AuthController {
 
