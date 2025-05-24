@@ -87,8 +87,6 @@ public class NoteDTO {
         this.fileType = fileType;
         this.analyze = analyze;
         this.neuralNetwork = neuralNetwork;
-        this.x = x;
-        this.y = y;
         this.files = new ArrayList<>();
         this.audios = new ArrayList<>();
         this.openGraphData = new HashMap<>();

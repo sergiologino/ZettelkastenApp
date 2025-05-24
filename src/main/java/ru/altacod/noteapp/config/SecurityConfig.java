@@ -104,7 +104,11 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 //        configuration.addAllowedOrigin("http://*");
 //        configuration.addAllowedOrigin("https://*"); // Разрешить локальный  фронтенд и все https
-        configuration.setAllowedOriginPatterns(List.of("https://sergiologino-note-app-new-design-eaa6.twc1.net","https://altanote.ru"));
+        configuration.setAllowedOriginPatterns(List.of(
+                "https://sergiologino-note-app-new-design-eaa6.twc1.net",
+                "https://altanote.ru",
+                "http://localhost:3000"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -114,16 +118,16 @@ public class SecurityConfig {
         return source;
     }
 
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("https://sergiologino-note-app-new-design-eaa6.twc1.net")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
-            }
-        };
-    }
+//    @Bean
+//    public WebMvcConfigurer corsConfigurer() {
+//        return new WebMvcConfigurer() {
+//            @Override
+//            public void addCorsMappings(CorsRegistry registry) {
+//                registry.addMapping("/**")
+//                        .allowedOrigins("https://sergiologino-note-app-new-design-eaa6.twc1.net")
+//                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
+//            }
+//        };
+//    }
 
 }
