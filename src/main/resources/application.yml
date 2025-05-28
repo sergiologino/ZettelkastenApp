@@ -84,7 +84,7 @@ telegram:
   bot:
     token: ${TELEGRAM_BOT_TOKEN}
     username: ${TELEGRAM_BOT_USERNAME}
-    enabled: ${TELEGRAM_BOT_ENABLED:true}  # по умолчанию true
+    enabled: ${TELEGRAM_BOT_ENABLED}  # по умолчанию true
 logging:
   threshold:
     console: INFO

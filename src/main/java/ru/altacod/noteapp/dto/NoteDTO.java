@@ -1,6 +1,7 @@
 package ru.altacod.noteapp.dto;
 
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import ru.altacod.noteapp.model.OpenGraphData;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
@@ -51,8 +52,10 @@ public class NoteDTO {
 
     private Integer height;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime createdAt;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime changedAt;
 
     private List<NoteFileDTO> files = new ArrayList<>();;

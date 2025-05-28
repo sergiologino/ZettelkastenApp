@@ -28,7 +28,7 @@ public class SecurityConfig {
     }
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web.debug(true); // 💡 Выключаем debug mode
+        return (web) -> web.debug(false); // 💡 Выключаем debug mode
     }
 
     @Bean
@@ -46,7 +46,7 @@ public class SecurityConfig {
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 "/api/auth/logout",
-                                "api/auth/sync",
+                                "/api/auth/sync",
                                 "/api/auth/**"
 
                         ).permitAll()
