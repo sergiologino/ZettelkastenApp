@@ -70,7 +70,8 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/oauth2/authorization/yandex") // Настройка Yandex OAuth2
+//                        .loginPage("/oauth2/authorization/yandex") // Настройка Yandex OAuth2
+                        .loginPage("/login/oauth2/code/yandex") // Настройка Yandex OAuth2
                         .defaultSuccessUrl("/dashboard")
                         .failureUrl("/auth?error")
                 )
