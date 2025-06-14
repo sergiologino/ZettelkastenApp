@@ -352,6 +352,21 @@ public class NoteService {
         note.setTags(getTagsByName(noteDTO.getTags()));
         autoFillNoteAttributes(note);
 
+
+        List<String> links = noteDTO.getUrls();
+        List<OpenGraphData> openGraphDataList = new ArrayList<>();
+
+        for (String url : noteDTO.getUrls()) {
+            try {
+                OpenGraphData og = fetchOpenGraphDataClear(url); // 👈 сам делаем
+                openGraphDataList.add( og);
+            } catch (Exception e) {
+//                System.out.println("Не удалось получить OpenGraph для {}", url, e);
+            }
+             // кладём в Map<String, OpenGraphData>
+        }
+        note.setOpenGraphData(openGraphDataList);
+
         // Назначение проекта
         if (noteDTO.getProjectId() != null) {
             Project project = projectService.getProjectById(noteDTO.getProjectId(), getCurrentUserId());
@@ -386,12 +401,40 @@ public class NoteService {
             note = addAudiosToNote(note.getId(), uploadedAudios);
         }
 
-        // Обновляем OpenGraph ссылки
-//        Note existingNote = noteRepository.findById(note.getId()).orElseThrow(() -> new EntityNotFoundException("Note not found"));
+        // Сохранение заметки со всеми изменениями
+        return noteRepository.save(note);
+    }
+
+
+
+
+//    @Transactional
+//    public Note updateNote(Note existingNote, NoteDTO noteDTO) {
+//        // Обновляем основные данные
+//        existingNote.setTitle(noteDTO.getTitle());
+//        existingNote.setContent(noteDTO.getContent());
+//        existingNote.setChangedAt(LocalDateTime.now());
+//
+//        // Обновляем проект, если он изменился
+//        if (noteDTO.getProjectId() != null && !noteDTO.getProjectId().equals(existingNote.getProject().getId())) {
+//            Project project = projectService.getProjectById(noteDTO.getProjectId(), existingNote.getUser().getId());
+//            existingNote.setProject(project);
+//        }
+//        for (NoteFile file : existingNote.getFiles()) {
+//            file.setNote(existingNote); // Убеждаемся, что связь сохранена
+//        }
+//
+//        for (NoteAudio audio : existingNote.getAudios()) {
+//            audio.setNote(existingNote);
+//        }
+//
+//        // Обновляем теги
+//        List<Tag> updatedTags = tagService.getTagsByName(noteDTO.getTags());
+//        existingNote.setTags(updatedTags);
+//
+//        // Обновляем OpenGraph ссылки
 //        List<String> newUrls = new ArrayList<>(noteDTO.getUrls());
 //        existingNote.getOpenGraphData().removeIf(data -> !newUrls.contains(data.getUrl()));
-//        List<OpenGraphData> existingUrlsTest=existingNote.getOpenGraphData();
-//        System.out.println("Having following OGData: "+existingUrlsTest);
 //        List<String> existingUrls = existingNote.getOpenGraphData().stream()
 //                .map(OpenGraphData::getUrl)
 //                .collect(Collectors.toList());
@@ -400,52 +443,9 @@ public class NoteService {
 //                .map(url -> fetchOpenGraphData(url, existingNote))
 //                .filter(Objects::nonNull)
 //                .forEach(existingNote.getOpenGraphData()::add);
-
-        // Сохранение заметки со всеми изменениями
-        return noteRepository.save(note);
-    }
-
-
-
-
-    @Transactional
-    public Note updateNote(Note existingNote, NoteDTO noteDTO) {
-        // Обновляем основные данные
-        existingNote.setTitle(noteDTO.getTitle());
-        existingNote.setContent(noteDTO.getContent());
-        existingNote.setChangedAt(LocalDateTime.now());
-
-        // Обновляем проект, если он изменился
-        if (noteDTO.getProjectId() != null && !noteDTO.getProjectId().equals(existingNote.getProject().getId())) {
-            Project project = projectService.getProjectById(noteDTO.getProjectId(), existingNote.getUser().getId());
-            existingNote.setProject(project);
-        }
-        for (NoteFile file : existingNote.getFiles()) {
-            file.setNote(existingNote); // Убеждаемся, что связь сохранена
-        }
-
-        for (NoteAudio audio : existingNote.getAudios()) {
-            audio.setNote(existingNote);
-        }
-
-        // Обновляем теги
-        List<Tag> updatedTags = tagService.getTagsByName(noteDTO.getTags());
-        existingNote.setTags(updatedTags);
-
-        // Обновляем OpenGraph ссылки
-        List<String> newUrls = new ArrayList<>(noteDTO.getUrls());
-        existingNote.getOpenGraphData().removeIf(data -> !newUrls.contains(data.getUrl()));
-        List<String> existingUrls = existingNote.getOpenGraphData().stream()
-                .map(OpenGraphData::getUrl)
-                .collect(Collectors.toList());
-        newUrls.stream()
-                .filter(url -> !existingUrls.contains(url))
-                .map(url -> fetchOpenGraphData(url, existingNote))
-                .filter(Objects::nonNull)
-                .forEach(existingNote.getOpenGraphData()::add);
-
-        return noteRepository.save(existingNote);
-    }
+//
+//        return noteRepository.save(existingNote);
+//    }
 
     @Transactional
     public Note updateNoteFiles(UUID noteId, List<MultipartFile> newFiles, List<UUID> deletedFileIds) {
