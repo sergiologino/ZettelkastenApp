@@ -32,6 +32,11 @@ import org.springframework.web.client.RestTemplate;
 
 @RestController
 @RequestMapping("/api/auth")
+//@CrossOrigin(origins = {
+//        "http://localhost:3000",
+//        "https://sergiologino-note-app-new-design-eaa6.twc1.net",
+//        "https://altanote.ru"
+//})
 @Tag(name = "Auth API", description = "API для регистрации и авторизации")
 public class AuthController {
 
@@ -108,6 +113,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+//  /auth/oauth2/${provider}/callback
     @GetMapping("/login/oauth2/code/yandex")
     @Operation(summary = "Обработка редиректа от Яндекса")
     public ResponseEntity<String> handleYandexCallback(
@@ -132,7 +138,7 @@ public class AuthController {
         body.add("code", code);
         body.add("client_id", "a0bc7b7381a84739be01111f12d9447e");
         body.add("client_secret", "c0701b6fad07403c8a8b6f9e99874e1f");
-        body.add("redirect_uri", "http://localhost:8081/login/oauth2/code/yandex");
+        body.add("redirect_uri", "https://sergiologino-zettelkastenapp-19f3.twc1.net/login/oauth2/code/yandex");
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
         System.out.println("Запрос на Яндекс: "+request);
@@ -143,7 +149,7 @@ public class AuthController {
 
         if (responseYand.getStatusCode().is2xxSuccessful()) {
 
-            String appBackendUrl = "http://localhost:8080/api/users/sync";
+            String appBackendUrl = "http://sergiologino-zettelkastenapp-19f3.twc1.net/api/users/sync";
             ResponseEntity<String> response = restTemplate.postForEntity(appBackendUrl, request, String.class);
 
             return ResponseEntity.ok("Токен успешно получен: " + response.getBody());

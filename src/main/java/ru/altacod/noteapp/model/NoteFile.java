@@ -24,6 +24,9 @@ public class NoteFile {
     @Column(nullable = false)
     private String originalName;
 
+    @Column(name="unique_file_name", nullable = false)
+    private String uniqueFileName;
+
     @Column(name = "created_at", nullable = true)
     private LocalDateTime createdAt;
 
@@ -42,7 +45,7 @@ public class NoteFile {
     public NoteFile() {
     }
 
-    public NoteFile(UUID id, String filePath, String fileName, Note note, String fileUrl, String fileType, UUID userId, String serverFilePath) {
+    public NoteFile(UUID id, String filePath, String fileName, Note note, String fileUrl, String fileType, UUID userId, String serverFilePath, String originalName, String uniqueFileName, LocalDateTime createdAt) {
         this.id = id;
         this.serverFilePath = filePath;
         this.originalName = fileName;
@@ -52,6 +55,7 @@ public class NoteFile {
         this.fileType = fileType;
         this.createdAt = LocalDateTime.now();
         this.serverFilePath = serverFilePath;
+        this.uniqueFileName = uniqueFileName;
 
     }
 
@@ -66,6 +70,10 @@ public class NoteFile {
     public UUID getUserId() {
         return userId;
     }
+
+    public void setUniqueFileName(String uniqueFileName) {this.uniqueFileName = uniqueFileName;}
+    public String getUniqueFileName() {return uniqueFileName;}
+
 
     public void setUserId(UUID userId) {
         this.userId = userId;

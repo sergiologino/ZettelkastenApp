@@ -1,5 +1,6 @@
 package ru.altacod.noteapp.config;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import ru.altacod.noteapp.bot.NoteBot;
 import ru.altacod.noteapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,7 +11,11 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import ru.altacod.noteapp.service.ProjectService;
 
 @Configuration
+@ConditionalOnProperty(name = "telegram.bot.enabled", havingValue = "true", matchIfMissing = true)
 public class TelegramBotConfig {
+
+    @Value("${telegram.bot.enabled:true}")
+    private boolean botEnabled;
 
     private final UserRepository userRepository;  // 👈 Добавляем зависимость
     private final ProjectService projectService;
@@ -27,8 +32,13 @@ public class TelegramBotConfig {
 
     @Bean
     public NoteBot noteBot(TelegramBotsApi telegramBotsApi) throws Exception {
+
+        if (!botEnabled) {
+            System.out.println("⛔ TelegramBot отключён через конфигурацию. Регистрация отменена.");
+            return null; // не регистрируем бота
+        }
         String projectId = null;
-        NoteBot bot = new NoteBot(userRepository ,botToken, botUsername, projectService);
+        NoteBot bot = new NoteBot(userRepository , projectService);
         telegramBotsApi.registerBot(bot);
         return bot;
     }

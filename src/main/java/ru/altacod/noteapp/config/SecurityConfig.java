@@ -14,15 +14,9 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-//import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import java.util.List;
-
-import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 public class SecurityConfig {
@@ -40,7 +34,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(withDefaults())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
 //                .cors(withDefaults())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -52,8 +46,10 @@ public class SecurityConfig {
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 "/api/auth/logout",
-                                "api/auth/sync",
-                                "/api/auth/**"
+                                "/api/auth/sync",
+                                "/api/auth/**",
+                                "/api/notes/download/audio/**",
+                                "/api/notes/download/file/**"
 
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // Разрешаем preflight-запросы
@@ -61,6 +57,8 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/notes/text").permitAll() // Разрешить запрос
                         .requestMatchers("/api/notes").authenticated()  // ✅ Доступ только авторизованным
                         .requestMatchers("/api/projects/**").authenticated()
+//                        .requestMatchers("/api/notes/download/audio/**").authenticated()
+//                        .requestMatchers("/api/notes/download/file/**").authenticated()
                         .anyRequest().authenticated()
 
                 )
@@ -76,7 +74,8 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/oauth2/authorization/yandex") // Настройка Yandex OAuth2
+//                        .loginPage("/oauth2/authorization/yandex") // Настройка Yandex OAuth2
+                        .loginPage("/login/oauth2/code/yandex") // Настройка Yandex OAuth2
                         .defaultSuccessUrl("/dashboard")
                         .failureUrl("/auth?error")
                 )
@@ -101,28 +100,18 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-//        configuration.addAllowedOrigin("http://*");
-//        configuration.addAllowedOrigin("https://*"); // Разрешить локальный  фронтенд и все https
-        configuration.setAllowedOriginPatterns(List.of("https://sergiologino-note-app-new-design-eaa6.twc1.net","https://altanote.ru"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "https://sergiologino-note-app-new-design-eaa6.twc1.net",
+                "https://altanote.ru"
+        ));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true); // ⬅️ важно!
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", config);
         return source;
-    }
-
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("https://sergiologino-note-app-new-design-eaa6.twc1.net")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
-            }
-        };
     }
 }

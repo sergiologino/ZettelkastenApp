@@ -16,6 +16,7 @@ public class NoteAudioDTO implements Serializable {
     @Getter
     private UUID id;
     private String name;
+    private String uniqueAudioName;
     private String url;
     private LocalDateTime createdAt;
     @Setter
@@ -43,13 +44,14 @@ public class NoteAudioDTO implements Serializable {
         this.url = url;
     }
 
-    public NoteAudioDTO(UUID id, String name, String url, LocalDateTime createdAt, String type, BigDecimal size) {
+    public NoteAudioDTO(UUID id, String name, String url, LocalDateTime createdAt, String type, BigDecimal size, String uniqueAudioName) {
         this.id = id;
         this.name = name;
         this.url = url;
         this.createdAt = createdAt;
         this.type = type;
         this.size = size;
+        this.uniqueAudioName = uniqueAudioName;
     }
 
     public NoteAudioDTO() {

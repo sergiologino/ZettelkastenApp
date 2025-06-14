@@ -1,5 +1,7 @@
 package ru.altacod.noteapp.service;
 
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import ru.altacod.noteapp.dto.NoteAudioDTO;
 import ru.altacod.noteapp.dto.NoteDTO;
 import ru.altacod.noteapp.dto.NoteFileDTO;
@@ -384,6 +386,21 @@ public class NoteService {
             note = addAudiosToNote(note.getId(), uploadedAudios);
         }
 
+        // Обновляем OpenGraph ссылки
+//        Note existingNote = noteRepository.findById(note.getId()).orElseThrow(() -> new EntityNotFoundException("Note not found"));
+//        List<String> newUrls = new ArrayList<>(noteDTO.getUrls());
+//        existingNote.getOpenGraphData().removeIf(data -> !newUrls.contains(data.getUrl()));
+//        List<OpenGraphData> existingUrlsTest=existingNote.getOpenGraphData();
+//        System.out.println("Having following OGData: "+existingUrlsTest);
+//        List<String> existingUrls = existingNote.getOpenGraphData().stream()
+//                .map(OpenGraphData::getUrl)
+//                .collect(Collectors.toList());
+//        newUrls.stream()
+//                .filter(url -> !existingUrls.contains(url))
+//                .map(url -> fetchOpenGraphData(url, existingNote))
+//                .filter(Objects::nonNull)
+//                .forEach(existingNote.getOpenGraphData()::add);
+
         // Сохранение заметки со всеми изменениями
         return noteRepository.save(note);
     }
@@ -493,6 +510,9 @@ public class NoteService {
 
                 NoteFile newNoteFile = new NoteFile();
                 newNoteFile.setFileName(originalFileName);
+                Resource resource = new UrlResource(filePath.toUri());
+                newNoteFile.setFileUrl(resource.getURL().toExternalForm());
+                newNoteFile.setUniqueFileName(uniqueFileName);
                 newNoteFile.setFilePath(filePath.toString());
                 newNoteFile.setNote(note);
                 newNoteFile.setUserId(note.getUser().getId());
@@ -527,6 +547,7 @@ public class NoteService {
 
                 NoteAudio newNoteAudio = new NoteAudio();
                 newNoteAudio.setAudioFileName(originalFileName);
+                newNoteAudio.setUniqueAudioName(uniqueFileName);
                 newNoteAudio.setAudioFilePath(filePath.toString());
                 newNoteAudio.setNote(note);
                 newNoteAudio.setUserId(note.getUser().getId());
@@ -560,8 +581,8 @@ public class NoteService {
             Project defaultProject = projectService.getDefaultProjectForUser();
             note.setProject(defaultProject);
         }
-        if (note.getContent() == null) {
-            note.setContent("Проект по умолчанию, " + System.lineSeparator() + note.getContent());
+        if (note.getTitle().isEmpty()) {
+            note.setTitle("Note: " + System.lineSeparator() + note.getContent());
         }
 
 
@@ -851,21 +872,7 @@ public class NoteService {
 
         String publicPath = "/files/documents/";
 
-        // Получаем уже существующие файлы у заметки
 
-//        Set<String> newFileNames = files.stream()
-//                .map(file -> StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename())))
-//                .collect(Collectors.toSet());
-
-//        List<NoteFile> filesToRemove = note.getFiles().stream()
-//                .filter(existingFile -> !newFileNames.contains(existingFile.getFileName()))
-//                .collect(Collectors.toList());
-//
-//        // Удаляем файлы, которых нет в переданном списке
-//        if(!filesToRemove.isEmpty()) {
-//            note.getFiles().removeAll(filesToRemove);
-//            noteFileRepository.deleteAll(filesToRemove); // Удаляем файлы из базы
-//        }
 
 
         for (MultipartFile file : files) {
@@ -911,19 +918,6 @@ public class NoteService {
         }
 
         String publicPath = "/files/audio/";
-
-        // Получаем уже существующие аудиофайлы у заметки
-//        Set<String> newAudioNames = audios.stream()
-//                .map(audio -> audio.getOriginalFilename())
-//                .collect(Collectors.toSet());
-
-//        List<NoteAudio> audiosToRemove = note.getAudios().stream()
-//                .filter(existingAudio -> !newAudioNames.contains(existingAudio.getAudioFileName()))
-//                .collect(Collectors.toList());
-//
-//        note.getAudios().removeAll(audiosToRemove);
-//        noteAudioRepository.deleteAll(audiosToRemove);
-
 
 
         for (MultipartFile audio : audios) {
@@ -1084,7 +1078,7 @@ public class NoteService {
     }
 
     public void autoFillNoteAttributes(Note note) {
-        if (note.getContent() != null && !note.getContent().isEmpty()) {
+        if (note.getContent() != null && !note.getContent().isEmpty() && note.getTitle().isEmpty()) {
             note.setTitle(generateTitleFromContent(note.getContent()));
             return;
         }
@@ -1093,28 +1087,28 @@ public class NoteService {
             // Получаем первый OpenGraph объект из списка
             OpenGraphData firstOg = note.getOpenGraphData().get(0);
             note.setTitle(firstOg.getTitle() != null ? firstOg.getTitle() : "OpenGraph Title");
-            note.setContent(firstOg.getDescription() != null ? firstOg.getDescription() : "OpenGraph Description");
+            String og_application = firstOg.getDescription() != null ? firstOg.getDescription() : "OpenGraph Description";
+            note.setContent(note.getContent()+og_application);
             return;
         }
 
         if (note.getFiles() != null && !note.getFiles().isEmpty()) {
-            note.setTitle("Вложений: " + note.getFiles().size());
+//            note.setTitle("Вложений: " + note.getFiles().size());
             note.setContent(note.getFiles().stream()
                     .map(NoteFile::getFileName) // Получаем имена файлов
                     .collect(Collectors.joining("\n")));
             return;
         }
 
-//        note.setTitle("Заметка " + note.getId());
-//        note.setContent("Заметка " + note.getId());
+
     }
 
     private String generateTitleFromContent(String content) {
         String[] sentences = content.split("(?<=\\.|!|\\?)\\s+"); // Разбиваем на предложения
         String firstSentence = sentences[0];
 
-        if (firstSentence.length() > 25) {
-            return firstSentence.substring(0, 25) + "...";
+        if (firstSentence.length() > 70) {
+            return firstSentence.substring(0, 70) + "...";
         }
         return firstSentence;
     }

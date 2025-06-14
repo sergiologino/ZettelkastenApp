@@ -16,10 +16,10 @@ public class CustomFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse res = (HttpServletResponse) response;
 
-//        System.out.println("🔎 [CustomFilter] Передача запроса в следующий фильтр: " + req.getMethod() + " " + req.getRequestURI());
+        System.out.println("🔎 [CustomFilter] Передача запроса в следующий фильтр: " + req.getMethod() + " " + req.getRequestURI());
 
         chain.doFilter(request, response);
 
-//        System.out.println("✅ [CustomFilter] Запрос обработан, статус: " + res.getStatus());
+        System.out.println("✅ [CustomFilter] Запрос обработан, статус: " + res.getStatus());
     }
 }

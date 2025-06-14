@@ -1,11 +1,15 @@
 package ru.altacod.noteapp.bot;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 import ru.altacod.noteapp.model.Project;
 import ru.altacod.noteapp.model.User;
 import ru.altacod.noteapp.repository.UserRepository;
@@ -30,7 +34,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.*;
 
-@Component
+@Service
 public class NoteBot extends TelegramLongPollingBot {
 
     private final UserRepository userRepository;
@@ -49,14 +53,10 @@ public class NoteBot extends TelegramLongPollingBot {
     private final Map<String, Message> projectSelectionCache = new HashMap<>();
 
 
-
-
-
-    public NoteBot(UserRepository userRepository, String botToken, String botUsername, ProjectService projectService) {
+    public NoteBot(UserRepository userRepository, ProjectService projectService) {
         this.userRepository = userRepository;
         this.projectService = projectService;
-        this.botToken = botToken;
-        this.botUsername = botUsername;
+
     }
 
     public UUID getCurrentUserId(String username) {
@@ -84,6 +84,7 @@ public class NoteBot extends TelegramLongPollingBot {
     @Transactional
     @Override
     public void onUpdateReceived(Update update) {
+
         if (update.hasMessage()) {
             Message message = update.getMessage();
             String chatId = message.getChatId().toString();

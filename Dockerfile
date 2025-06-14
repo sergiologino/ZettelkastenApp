@@ -24,3 +24,14 @@ EXPOSE 8080
 # Переменные среды
 ENV JAVA_OPTS=""
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+
+#FROM eclipse-temurin:17-jdk-alpine
+#
+#WORKDIR /app
+#
+## копируем jar-файл внутрь контейнера
+#COPY build/libs/app.jar app.jar
+#
+#EXPOSE 8080
+#
+#CMD ["java", "-jar", "app.jar"]

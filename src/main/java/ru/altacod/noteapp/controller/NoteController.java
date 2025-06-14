@@ -49,7 +49,11 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/notes")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {
+        "http://localhost:3000",
+        "https://sergiologino-note-app-new-design-eaa6.twc1.net",
+        "https://altanote.ru"
+})
 public class NoteController {
 
     private final NoteService noteService;
@@ -298,7 +302,8 @@ public class NoteController {
                             file.getFilePath(),
                             file.getCreatedAt(),
                             file.getFileType(),
-                            file.getOriginalName())) // ✅ Корректный маппинг
+                            file.getOriginalName(),
+                            file.getUniqueFileName())) // ✅ Корректный маппинг
                     .collect(Collectors.toList());
 
             List<NoteAudioDTO> newAudios = Optional.ofNullable(noteDto.getAudios())
@@ -310,7 +315,8 @@ public class NoteController {
                             audio.getUrl(),
                             audio.getCreatedAt(),
                             audio.getType(),
-                            audio.getSize()))
+                            audio.getSize(),
+                            audio.getUniqueAudioName()))
                     .collect(Collectors.toList());
 
             //--------------------- ЗАГЛУШКИ ---------------------------

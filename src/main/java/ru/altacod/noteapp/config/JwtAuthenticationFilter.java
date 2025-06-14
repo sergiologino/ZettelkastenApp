@@ -30,7 +30,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Разрешаем без проверки токена логин, регистрацию и другие открытые запросы
         if (requestURI.startsWith("/api/auth/register") ||
                 requestURI.startsWith("/api/auth/login") ||
-                requestURI.startsWith("/api/auth/sync")) {
+                requestURI.startsWith("/api/auth/sync")
+//              || requestURI.startsWith("/api//data")
+        ){
 
             chain.doFilter(request, response);
             return;

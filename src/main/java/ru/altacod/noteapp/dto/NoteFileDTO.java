@@ -14,6 +14,9 @@ public class NoteFileDTO implements Serializable {
 
     private String originalName;
 
+    private String uniqueFileName;
+
+
     private String fileType;
 
 
@@ -24,19 +27,22 @@ public class NoteFileDTO implements Serializable {
 
 
 
-    public NoteFileDTO(UUID id, String url, String name, String filePath, LocalDateTime createdAt, String fileType, String originalName) {
+    public NoteFileDTO(UUID id, String url, String name, String filePath, LocalDateTime createdAt, String fileType, String originalName, String uniqueFileName) {
         this.id = id;
         this.name = name;
         this.fileUrl = fileUrl;
         this.filePath = filePath;
         this.originalName = originalName;
         this.fileType = fileType;
+        this.uniqueFileName = uniqueFileName;
+
 
 
     }
 
     public NoteFileDTO() {
     }
+
 
     public LocalDateTime getCreatedAt() {return createdAt;}
 
@@ -98,4 +104,11 @@ public class NoteFileDTO implements Serializable {
         this.fileType = fileType;
     }
 
+    public String getUniqueFileName() {
+        return uniqueFileName;
+    }
+
+    public void setUniqueFileName(String uniqueFileName) {
+        this.uniqueFileName = uniqueFileName;
+    }
 }
