@@ -302,7 +302,8 @@ public class NoteController {
                             file.getFilePath(),
                             file.getCreatedAt(),
                             file.getFileType(),
-                            file.getOriginalName())) // ✅ Корректный маппинг
+                            file.getOriginalName(),
+                            file.getUniqueFileName())) // ✅ Корректный маппинг
                     .collect(Collectors.toList());
 
             List<NoteAudioDTO> newAudios = Optional.ofNullable(noteDto.getAudios())
@@ -314,7 +315,8 @@ public class NoteController {
                             audio.getUrl(),
                             audio.getCreatedAt(),
                             audio.getType(),
-                            audio.getSize()))
+                            audio.getSize(),
+                            audio.getUniqueAudioName()))
                     .collect(Collectors.toList());
 
             //--------------------- ЗАГЛУШКИ ---------------------------

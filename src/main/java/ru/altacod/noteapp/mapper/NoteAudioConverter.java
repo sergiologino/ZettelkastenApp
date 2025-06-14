@@ -18,6 +18,7 @@ public class NoteAudioConverter {
         dto.setType(noteAudio.getAudioType());
         dto.setSize(noteAudio.getSize());
         dto.setCreatedAt(noteAudio.getCreatedAt());
+        dto.setUniqueAudioName(noteAudio.getUniqueAudioName());
 
         return dto;
     }
@@ -33,6 +34,7 @@ public class NoteAudioConverter {
         noteAudio.setAudioType(dto.getType());
         noteAudio.setSize(dto.getSize());
         noteAudio.setCreatedAt(dto.getCreatedAt());
+        noteAudio.setUniqueAudioName(dto.getUniqueAudioName());
 
         return noteAudio;
     }

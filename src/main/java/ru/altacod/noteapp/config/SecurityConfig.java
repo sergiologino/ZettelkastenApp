@@ -47,7 +47,9 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/logout",
                                 "/api/auth/sync",
-                                "/api/auth/**"
+                                "/api/auth/**",
+                                "/api/notes/download/audio/**",
+                                "/api/notes/download/file/**"
 
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // Разрешаем preflight-запросы
@@ -55,6 +57,8 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/notes/text").permitAll() // Разрешить запрос
                         .requestMatchers("/api/notes").authenticated()  // ✅ Доступ только авторизованным
                         .requestMatchers("/api/projects/**").authenticated()
+//                        .requestMatchers("/api/notes/download/audio/**").authenticated()
+//                        .requestMatchers("/api/notes/download/file/**").authenticated()
                         .anyRequest().authenticated()
 
                 )

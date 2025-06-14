@@ -26,6 +26,9 @@ public class NoteAudio {
     @Column(nullable = false)
     private String originalName;
 
+    @Column(name="unique_audio_name",nullable = true)
+    private String uniqueAudioName;
+
     @Column(name="audio_type", nullable = true)
     private String audioType;
 
@@ -47,13 +50,14 @@ public class NoteAudio {
     public NoteAudio() {
     }
 
-    public NoteAudio(UUID id, String filePath, String fileName, Note note, String url, UUID userId) {
+    public NoteAudio(UUID id, String filePath, String fileName, Note note, String url, UUID userId, String uniqueAudioName, BigDecimal size, LocalDateTime createdAt) {
         this.id = id;
         this.serverFilePath = filePath;
         this.originalName = fileName;
         this.note = note;
         this.url = url;
         this.userId = userId;
+        this.uniqueAudioName = uniqueAudioName;
 
     }
 
@@ -67,6 +71,10 @@ public class NoteAudio {
     public void setUserId(UUID userId) {
         this.userId = userId;
     }
+
+    public String getUniqueAudioName() {return uniqueAudioName;}
+
+    public void setUniqueAudioName(String uniqueAudiolName) {this.uniqueAudioName = uniqueAudiolName;}
 
     public LocalDateTime getCreatedAt() {return createdAt;}
 

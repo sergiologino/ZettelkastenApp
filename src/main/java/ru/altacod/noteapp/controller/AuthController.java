@@ -113,6 +113,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+//  /auth/oauth2/${provider}/callback
     @GetMapping("/login/oauth2/code/yandex")
     @Operation(summary = "Обработка редиректа от Яндекса")
     public ResponseEntity<String> handleYandexCallback(
