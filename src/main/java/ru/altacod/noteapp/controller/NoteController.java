@@ -188,36 +188,31 @@ public class NoteController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ошибка при сохранении заметки: " + e.getMessage());
         }
     };
-//    } catch (JsonMappingException e) {
-//                throw new RuntimeException(e);
-//            } catch (JsonProcessingException e) {
-//                throw new RuntimeException(e);
-//
-//
-//
-//
-//    @Operation(summary = "Обновить заметку ", description = "Обновляет заметку ")
-//    @ApiResponses(value = {
-//            @ApiResponse(responseCode = "200", description = "Заметка успешно обновлена",
-//                    content = @Content(mediaType = "application/json",
-//                            schema = @Schema(implementation = NoteDTO.class))),
-//            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
-//            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
-//    })
-//    @PutMapping
-//    public ResponseEntity<NoteDTO> updateNote(@RequestBody NoteDTO noteDTO, HttpServletRequest request) {
-//        // Получаем текущую заметку из БД
-//        Note existingNote = noteService.getNoteById(noteDTO.getId(), request);
-//        if (existingNote == null) {
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-//        }
-//
-//        // Обновляем основное содержимое заметки
-//        Note updatedNote = noteService.updateNote(existingNote, noteDTO);
-//        NoteDTO returnedNote = noteConverter.toDTO(updatedNote);
-//
-//        return ResponseEntity.ok(returnedNote);
-//    }
+
+    @Operation(summary = "Обновить заметку ", description = "Обновляет заметку ")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Заметка успешно обновлена",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = NoteDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Заметка не найдена"),
+            @ApiResponse(responseCode = "500", description = "Ошибка сервера")
+    })
+    @PutMapping
+    public ResponseEntity<NoteDTO> updateNote(@RequestBody NoteDTO noteDTO, HttpServletRequest request) {
+        // Получаем текущую заметку из БД
+        Note existingNote = noteService.getNoteById(noteDTO.getId(), request);
+        if (existingNote == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+
+        // Обновляем основное содержимое заметки
+        Note updatedNote = noteService.updateNote(existingNote, noteDTO);
+        NoteDTO returnedNote = noteConverter.toDTO(updatedNote);
+
+        return ResponseEntity.ok(returnedNote);
+    }
+
+
 
     @PostMapping("/{noteId}/files")
     @Operation(
