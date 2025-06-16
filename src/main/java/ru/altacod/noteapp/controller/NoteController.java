@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.core.io.FileSystemResource;
 import ru.altacod.noteapp.dto.NoteAudioDTO;
 import ru.altacod.noteapp.dto.NoteDTO;
 import ru.altacod.noteapp.dto.NoteFileDTO;
@@ -25,6 +26,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
@@ -529,19 +531,17 @@ public class NoteController {
         Path filePath = Paths.get(fileStoragePath).resolve(filename).normalize();
         System.out.println("Эндпойнт /download/file/filename downloadFile: "+filePath);
 
-        try {
-            Resource resource = new UrlResource(filePath.toUri());
-            if (!resource.exists()) {
-                return ResponseEntity.notFound().build();
-            }
+        File file = filePath.toFile();
+        if (!file.exists()) return ResponseEntity.notFound().build();
 
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .body(resource);
-        } catch (MalformedURLException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        Resource resource = new FileSystemResource(file);
+
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                .contentLength(file.length())
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
     }
 
     @Operation(summary = "Проанализировать заметку", description = "Отправляет заметку на анализ и присваивает автоматически сгенерированные теги.")

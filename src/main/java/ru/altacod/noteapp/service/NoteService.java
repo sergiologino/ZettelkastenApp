@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -469,8 +470,9 @@ public class NoteService {
 
                 NoteFile newNoteFile = new NoteFile();
                 newNoteFile.setFileName(originalFileName);
-                Resource resource = new UrlResource(filePath.toUri());
-                newNoteFile.setFileUrl(resource.getURL().toExternalForm());
+
+                String publicUrl = "/api/notes/download/file/" + uniqueFileName;
+                newNoteFile.setFileUrl(publicUrl);
                 newNoteFile.setUniqueFileName(uniqueFileName);
                 newNoteFile.setFilePath(filePath.toString());
                 newNoteFile.setNote(note);
@@ -505,6 +507,11 @@ public class NoteService {
                 Files.copy(audio.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
                 NoteAudio newNoteAudio = new NoteAudio();
+                String publicUrl = "/api/notes/download/audio/" + uniqueFileName;
+                newNoteAudio.setUrl(publicUrl);
+                newNoteAudio.setAudioType(audio.getContentType());
+                newNoteAudio.setSize(BigDecimal.valueOf(audio.getSize()));
+
                 newNoteAudio.setAudioFileName(originalFileName);
                 newNoteAudio.setUniqueAudioName(uniqueFileName);
                 newNoteAudio.setAudioFilePath(filePath.toString());
