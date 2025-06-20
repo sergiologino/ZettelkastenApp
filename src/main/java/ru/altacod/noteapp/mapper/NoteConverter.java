@@ -83,20 +83,20 @@ public class NoteConverter extends AbstractConverter {
 
 
 
-            if (dto.getOpenGraphData() != null) {
-                List<OpenGraphData> openGraphDataList = dto.getOpenGraphData().entrySet().stream()
-                        .map(entry -> {
-                            OpenGraphData ogData = new OpenGraphData();
-                            ogData.setUrl(entry.getKey());
-                            ogData.setTitle(entry.getValue().getTitle());
-                            ogData.setDescription(entry.getValue().getDescription());
-                            ogData.setImage(entry.getValue().getImage());
-                            ogData.setNote(note);
-                            return ogData;
-                        })
-                        .collect(Collectors.toList());
-                note.setOpenGraphData(openGraphDataList);
-            }
+//            if (dto.getOpenGraphData() != null) {
+//                List<OpenGraphData> openGraphDataList = dto.getOpenGraphData().entrySet().stream()
+//                        .map(entry -> {
+//                            OpenGraphData ogData = new OpenGraphData();
+//                            ogData.setUrl(entry.getKey());
+//                            ogData.setTitle(entry.getValue().getTitle());
+//                            ogData.setDescription(entry.getValue().getDescription());
+//                            ogData.setImage(entry.getValue().getImage());
+//                            ogData.setNote(note);
+//                            return ogData;
+//                        })
+//                        .collect(Collectors.toList());
+//                note.setOpenGraphData(openGraphDataList);
+//            }
 
 
 
