@@ -206,6 +206,8 @@ public class NoteController {
         if (existingNote == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
+//        log.info("🔁 Обновление заметки: {}", noteDTO); // Добавь toString в NoteDTO, если нужно
+
 
         // Обновляем основное содержимое заметки
         Note updatedNote = noteService.updateNote(existingNote, noteDTO);

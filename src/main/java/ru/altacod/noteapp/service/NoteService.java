@@ -562,16 +562,18 @@ public class NoteService {
         note.setCreatedAt(LocalDateTime.now());
         note.setChangedAt(LocalDateTime.now());
 
-//}
+//        Map<String, OpenGraphData> ogDataMap = new HashMap<>();
+
         Note savedNote = noteRepository.save(note);
 
 //        noteRepository.save(note);
         // Обрабатываем ссылки и сохраняем Open Graph данные
+        Note doubleNote = savedNote;
         boolean useOpenGraph = openGraphDataEnabled;
         if (useOpenGraph) {
             if (links != null && !links.isEmpty()) {
                 // Получаем текущую коллекцию
-                List<OpenGraphData> existingData = openGraphDataRepository.findByNoteId(note.getId());
+                List<OpenGraphData> existingData = openGraphDataRepository.findByNoteId(savedNote.getId());
 
                 // Удаляем существующие элементы, которые не соответствуют новым ссылкам
                 existingData.removeIf(data -> !links.contains(data.getUrl()));
@@ -582,19 +584,20 @@ public class NoteService {
                         .collect(Collectors.toList());
                 links.stream()
                         .filter(link -> !existingUrls.contains(link))
-                        .map(link -> fetchOpenGraphData(link, note))
+                        .map(link -> fetchOpenGraphData(link, doubleNote))
                         .filter(Objects::nonNull)
                         .forEach(existingData::add); // Добавляем в существующую коллекцию
 
                 System.out.println("existingData содержит: " + existingData); // проверяем что получилось в existingData
 
                 // Добавляем данные в объект Note
-                savedNote.getOpenGraphData().addAll(existingData);
+                note.getOpenGraphData().addAll(existingData);
 
                 // Сохраняем данные в базу через репозиторий
                 openGraphDataRepository.saveAll(existingData);
 
             }
+
 
             System.out.println("OpenGraphData после обработки: " + note.getOpenGraphData());
 
@@ -614,7 +617,7 @@ public class NoteService {
                 noteAudioRepository.save(audio);
             }
         }
-//        noteRepository.save(savedNote);
+        noteRepository.save(savedNote);
         return savedNote;
 
 
@@ -655,12 +658,14 @@ public class NoteService {
             ogData.setImage(getMetaTagContent(document, "og:image"));
             ogData.setNote(note);
             ogData.setUserId(note.getUser().getId());
+            System.out.println("Успешно заполнен userID: " + ogData.getUserId());
+//            openGraphDataRepository.save(ogData);
 
             System.out.println("Успешно загружены OpenGraph данные: " + ogData.getTitle());
 
             return ogData;
         } catch (IOException e) {
-            System.err.println("Ошибка при загрузке OpenGraph данных: " + e.getMessage());
+            System.err.println("!!! Ошибка при загрузке OpenGraph данных: " + e.getMessage());
             return null; // Возвращаем null при ошибке
         }
     }
@@ -859,14 +864,14 @@ public class NoteService {
 
             note.getAudios().forEach(audio -> {
 //                audio.setUrl(generateFullAudioUrl(request, audio.getAudioFilePath()));
-                audio.setUrl("/api/notes/download/audio/" + audio.getAudioFileName());
+                audio.setUrl("/api/notes/download/audio/" + audio.getUniqueAudioName());
 //                System.out.println("audio URL: " + audio.getUrl());
 
             });
 
             note.getFiles().forEach(file -> {
 //                file.setUrl(generateFullFileUrl(request, file.getUrl()));
-                file.setUrl("/api/notes/download/file/" + file.getFileName()); // Генерация ссылки для скачивания
+                file.setUrl("/api/notes/download/file/" + file.getUniqueFileName()); // Генерация ссылки для скачивания
 //                System.out.println("file URL: " + file.getUrl());
             });
         }
