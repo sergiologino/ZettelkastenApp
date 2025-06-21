@@ -13,12 +13,14 @@ public class NoteAudioConverter {
         }
         NoteAudioDTO dto = new NoteAudioDTO();
         dto.setId(noteAudio.getId());
+        dto.setUrl(noteAudio.getUrl());
         dto.setAudioName(noteAudio.getAudioFileName());
         dto.setAudioPath(noteAudio.getAudioFilePath());
         dto.setType(noteAudio.getAudioType());
         dto.setSize(noteAudio.getSize());
         dto.setCreatedAt(noteAudio.getCreatedAt());
         dto.setUniqueAudioName(noteAudio.getUniqueAudioName());
+        dto.setAudioName(noteAudio.getOriginalName());
 
         return dto;
     }
@@ -29,6 +31,7 @@ public class NoteAudioConverter {
         }
         NoteAudio noteAudio = new NoteAudio();
         noteAudio.setId(dto.getId());
+
         noteAudio.setAudioFileName(dto.getAudioName());
         noteAudio.setAudioFilePath(dto.getAudioPath());
         noteAudio.setAudioType(dto.getType());
