@@ -1,6 +1,9 @@
 package ru.altacod.noteapp.controller;
 
+import io.jsonwebtoken.Claims;
+import org.springframework.http.*;
 import ru.altacod.noteapp.config.JwtTokenProvider;
+import ru.altacod.noteapp.dto.NoteDTO;
 import ru.altacod.noteapp.dto.UserRegistrationDTO;
 import ru.altacod.noteapp.model.Project;
 import ru.altacod.noteapp.model.User;
@@ -10,10 +13,6 @@ import ru.altacod.noteapp.service.ProjectService;
 import ru.altacod.noteapp.service.UserService;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +28,7 @@ import java.util.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.client.RestTemplate;
+import ru.altacod.noteapp.utils.JwtUtils;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -47,17 +47,20 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final ProjectService projectService;
     private final ProjectRepository projectRepository;
+    private final JwtUtils jwtUtils;
+//    private final User user;
 
 
-    public AuthController(UserService userService, UserRepository userRepository, JwtTokenProvider jwtTokenProvider, PasswordEncoder passwordEncoder, ProjectService projectService, ProjectRepository projectRepository) {
+    public AuthController(UserService userService, UserRepository userRepository, JwtTokenProvider jwtTokenProvider, PasswordEncoder passwordEncoder, ProjectService projectService, ProjectRepository projectRepository, JwtUtils jwtUtils) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
         this.projectService = projectService;
         this.projectRepository = projectRepository;
-    }
+        this.jwtUtils = jwtUtils;
 
+    }
 
 
     @PostMapping("/login")
@@ -113,7 +116,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-//  /auth/oauth2/${provider}/callback
+    //  /auth/oauth2/${provider}/callback
     @GetMapping("/login/oauth2/code/yandex")
     @Operation(summary = "Обработка редиректа от Яндекса")
     public ResponseEntity<String> handleYandexCallback(
@@ -141,10 +144,9 @@ public class AuthController {
         body.add("redirect_uri", "https://sergiologino-zettelkastenapp-19f3.twc1.net/login/oauth2/code/yandex");
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-        System.out.println("Запрос на Яндекс: "+request);
+        System.out.println("Запрос на Яндекс: " + request);
 
         ResponseEntity<String> responseYand = restTemplate.postForEntity(tokenUri, request, String.class);
-
 
 
         if (responseYand.getStatusCode().is2xxSuccessful()) {
@@ -201,9 +203,7 @@ public class AuthController {
         user.setEmail(userDTO.getEmail());
 
 
-
-
-        ResponseEntity<String> response = syncUser(user);
+        ResponseEntity<User> response = sync(user.getUsername());
 //        System.out.println("Ответ syncUser: " + response.getStatusCode());
 
         if (!response.getStatusCode().is2xxSuccessful()) {
@@ -217,38 +217,75 @@ public class AuthController {
     }
 
 
+    //    @PostMapping("/sync")
+//        public ResponseEntity<String> syncUser(@RequestBody User user) {
+//
+//
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//
+//        if (authentication != null) {
+//            String currentUser = authentication.getName();
+////            System.out.println("Пользователь, выполняющий синхронизацию: " + currentUser);
+//        } else {
+//            userService.registerUser(user);
+////            System.out.println("✅ Новый пользователь зарегистрирован в syncUser.");
+//
+//
+//
+//
+//            // ✅ Создаём проект "Главное" для пользователя
+//            Project defaultProject = new Project();
+//            defaultProject.setName("Мой проект");
+//            defaultProject.setDescription("Проект по умолчанию");
+//            defaultProject.setColor("#BD10E0");
+//            defaultProject.setPosition(1);
+//            defaultProject.setDefault(true);
+//            defaultProject.setUserId(user.getId());
+//            defaultProject.setCreatedAt(LocalDateTime.now());
+//
+//            projectRepository.save(defaultProject);
+//
+//        }
+//
+//            return ResponseEntity.ok("Пользователь успешно синхронизирован.");
+//        }
+//    }
     @PostMapping("/sync")
-        public ResponseEntity<String> syncUser(@RequestBody User user) {
-//          Убираем проверку, потому что она уже есть в `register()`
-//        System.out.println("Синхронизация данных пользователя: " + user.getUsername());
+    public ResponseEntity<User> sync(@RequestHeader("Authorization") String tokenHeader) {
+        try {
+            String token = tokenHeader.replace("Bearer ", "");
+            Claims claims = jwtUtils.parseToken(token);
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = claims.getSubject(); // или UUID, если ты переделал
+            User user = userRepository.findByUsername(username);
 
-        if (authentication != null) {
-            String currentUser = authentication.getName();
-//            System.out.println("Пользователь, выполняющий синхронизацию: " + currentUser);
-        } else {
-            userService.registerUser(user);
-//            System.out.println("✅ Новый пользователь зарегистрирован в syncUser.");
+            if (user == null) {
+                // ⬇️ создаём нового пользователя
+                user = new User();
+                user.setUsername(username); // если есть email — заполни и его
+                //            user.setCreatedAt(LocalDateTime.now());
 
+                userService.registerUser(user); // сохранение
 
-            // ❌ Не вызываем `userService.registerUser(user)`, он уже сохранён!
+                // ✅ проект по умолчанию
+                Project defaultProject = new Project();
+                defaultProject.setName("Мой проект");
+                defaultProject.setDescription("Проект по умолчанию");
+                defaultProject.setColor("#BD10E0");
+                defaultProject.setPosition(1);
+                defaultProject.setDefault(true);
+                defaultProject.setUserId(user.getId());
+                defaultProject.setCreatedAt(LocalDateTime.now());
 
-            // ✅ Создаём проект "Главное" для пользователя
-            Project defaultProject = new Project();
-            defaultProject.setName("Мой проект");
-            defaultProject.setDescription("Проект по умолчанию");
-            defaultProject.setColor("#BD10E0");
-            defaultProject.setPosition(1);
-            defaultProject.setDefault(true);
-            defaultProject.setUserId(user.getId());
-            defaultProject.setCreatedAt(LocalDateTime.now());
+                projectRepository.save(defaultProject);
+            }
 
-            projectRepository.save(defaultProject);
+            return ResponseEntity.ok(user);
 
-        }
-
-            return ResponseEntity.ok("Пользователь успешно синхронизирован.");
+        } catch (Exception e) {
+            //        log.error("Ошибка в /auth/sync", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+}
 

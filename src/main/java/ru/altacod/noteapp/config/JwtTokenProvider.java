@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import ru.altacod.noteapp.model.User;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -62,6 +63,18 @@ public class JwtTokenProvider {
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
+
+//    public String generateToken(User user) {
+//        Date now = new Date();
+//        Date expiry = new Date(now.getTime() + accessTokenExpiration); // из настроек
+//
+//        return Jwts.builder()
+//                .setSubject(user.getUsername()) // 👈 username как subject
+//                .setIssuedAt(now)
+//                .setExpiration(expiry)
+//                .signWith(кey)
+//                .compact();
+//    }
 
     // Извлечение userId из токена
     public String getUserIdFromToken(String token) {
