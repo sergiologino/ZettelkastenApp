@@ -57,16 +57,7 @@ public class TagService {
         tagRepository.delete(tag);
     }
 
-    public Tag getTagByName(String name) {
-        UUID userId = getCurrentUserId();
-        return tagRepository.findByNameAndUserId(name, userId)
-                .orElseThrow(() -> new EntityNotFoundException("Tag not found or access denied."));
 
-    }
-
-    public String tagName(Tag tag) {
-        return tag.getName();
-    }
     public List<String> tagNameList(List<Tag> tags) {
         List<String> tagNames = new ArrayList<>();
         for (Tag tag : tags) {
@@ -121,14 +112,7 @@ public class TagService {
         return tagRepository.save(tag);
     }
 
-    public List<Tag> getTagsByName(List<String> tagNames) {
-        UUID userId = getCurrentUserId();
 
-        // Получаем теги по именам только для текущего пользователя
-        return tagNames.stream()
-                .map(tagName -> findOrCreateTag(tagName, false)) // Используем findOrCreateTag для каждого имени
-                .toList();
-    }
     public List<Tag> getTagsByNameAndUserId(List<String> tagNames, UUID userId) {
 //        UUID userId = getCurrentUserId();
 
@@ -139,12 +123,7 @@ public class TagService {
     }
     //
 
-    public List<Tag> getTagsByNameForBot(List<String> tagNames, UUID userId) {
-                // Получаем теги по именам только для текущего пользователя
-        return tagNames.stream()
-                .map(tagName -> findOrCreateTagForBot(tagName, false, userId)) // Используем findOrCreateTag для каждого имени
-                .toList();
-    }
+
 
 }
 

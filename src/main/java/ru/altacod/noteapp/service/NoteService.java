@@ -49,6 +49,7 @@ import java.time.format.DateTimeFormatter;
 
 
 
+
 @Service
 public class NoteService {
 
@@ -100,6 +101,11 @@ public class NoteService {
 //        this.noteFileDTO = noteFileDTO;
 //        this.noteFileConverter = noteFileConverter;
 //        this.noteAudioConverter = noteAudioConverter;
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) return null;
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 
     public UUID getCurrentUserId() {
@@ -649,13 +655,13 @@ public class NoteService {
 
             // Извлекаем OpenGraph данные
             OpenGraphData ogData = new OpenGraphData();
-            ogData.setUrl(url);
-            ogData.setTitle(getMetaTagContent(document, "og:title"));
+            ogData.setUrl(truncate(url, 255)); // урезаем URL
+            ogData.setTitle(truncate(getMetaTagContent(document, "og:title"), 255));
             if (ogData.getTitle().isEmpty()) {
                 ogData.setTitle(ogData.getUrl().toString()); // Используем title, если OpenGraph теги отсутствуют
             }
-            ogData.setDescription(getMetaTagContent(document, "og:description"));
-            ogData.setImage(getMetaTagContent(document, "og:image"));
+            ogData.setDescription(truncate(getMetaTagContent(document, "og:description"), 255));
+            ogData.setImage(truncate(getMetaTagContent(document, "og:image"), 255));
             ogData.setNote(note);
             ogData.setUserId(note.getUser().getId());
             System.out.println("Успешно заполнен userID: " + ogData.getUserId());
@@ -821,34 +827,26 @@ public class NoteService {
         }
 
         // Обновляем теги
-        List<Tag> updatedTags = tagService.getTagsByName(noteDTO.getTags());
-        existingNote.setTags(updatedTags);
+        List<Tag> updatedTags = tagService.getTagsByNameAndUserId(noteDTO.getTags(), existingNote.getUser().getId());
+        if (!updatedTags.isEmpty()) {
+            existingNote.setTags(updatedTags);
+        };
 
         // Обновляем OpenGraph ссылки
         List<String> newUrls = new ArrayList<>(noteDTO.getUrls());
-        existingNote.getOpenGraphData().removeIf(data -> !newUrls.contains(data.getUrl()));
-        List<String> existingUrls = existingNote.getOpenGraphData().stream()
-                .map(OpenGraphData::getUrl)
-                .collect(Collectors.toList());
-        newUrls.stream()
-                .filter(url -> !existingUrls.contains(url))
-                .map(url -> fetchOpenGraphData(url, existingNote))
-                .filter(Objects::nonNull)
-                .forEach(existingNote.getOpenGraphData()::add);
+        if(!newUrls.isEmpty()) {
+            existingNote.getOpenGraphData().removeIf(data -> !newUrls.contains(data.getUrl()));
+            List<String> existingUrls = existingNote.getOpenGraphData().stream()
+                    .map(OpenGraphData::getUrl)
+                    .collect(Collectors.toList());
+            newUrls.stream()
+                    .filter(url -> !existingUrls.contains(url))
+                    .map(url -> fetchOpenGraphData(url, existingNote))
+                    .filter(Objects::nonNull)
+                    .forEach(existingNote.getOpenGraphData()::add);
+        }
 
-//        List<String> links = noteDTO.getUrls();
-//        List<OpenGraphData> openGraphDataList = new ArrayList<>();
-//
-//        for (String url : noteDTO.getUrls()) {
-//            try {
-//                OpenGraphData og = fetchOpenGraphDataClear(url); // 👈 сам делаем
-//                openGraphDataList.add( og);
-//            } catch (Exception e) {
-////                System.out.println("Не удалось получить OpenGraph для {}", url, e);
-//            }
-//            // кладём в Map<String, OpenGraphData>
-//        }
-//        note.setOpenGraphData(openGraphDataList);
+
 
 
         return noteRepository.save(existingNote);
