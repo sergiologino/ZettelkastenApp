@@ -85,7 +85,7 @@ public class Note {
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    private List<OpenGraphData> openGraphData = new ArrayList<>();;
+    private List<OpenGraphData> openGraphData = new ArrayList<>();
 
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference // Указывает, что это основная связь

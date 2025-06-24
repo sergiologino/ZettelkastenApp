@@ -22,7 +22,7 @@ public class NoteDTO {
     private String content;
 
     @JsonProperty("urls")
-    private List<String> urls = new ArrayList<>();;
+    private List<String> urls = new ArrayList<>();
 
     private String audioFilePath;
 
@@ -34,7 +34,7 @@ public class NoteDTO {
 
     private UUID projectId;
 
-    private List<String> tags= new ArrayList<>();;
+    private List<String> tags= new ArrayList<>();
 
     private String filePath;
 
@@ -58,9 +58,9 @@ public class NoteDTO {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime changedAt;
 
-    private List<NoteFileDTO> files = new ArrayList<>();;
+    private List<NoteFileDTO> files = new ArrayList<>();
 
-    private List<NoteAudioDTO> audios = new ArrayList<>();;
+    private List<NoteAudioDTO> audios = new ArrayList<>();
 
     private UUID userId;
 
@@ -72,7 +72,7 @@ public class NoteDTO {
 
     private String formattedDate;
 
-    private Map<String, OpenGraphData> openGraphData = new HashMap<>();; // Данные Open Graph
+    private Map<String, OpenGraphData> openGraphData = new HashMap<>(); // Данные Open Graph
 
     public NoteDTO() {}
 

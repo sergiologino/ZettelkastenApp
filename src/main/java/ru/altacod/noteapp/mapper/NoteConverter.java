@@ -136,7 +136,17 @@ public class NoteConverter extends AbstractConverter {
             newNoteDTO.setY(note.getPositionY());
             newNoteDTO.setWidth(note.getWidth());
             newNoteDTO.setHeight(note.getHeight());
-            newNoteDTO.setUrls(new ArrayList<String>());
+            
+            // Extract URLs from OpenGraphData
+            if (note.getOpenGraphData() != null && !note.getOpenGraphData().isEmpty()) {
+                List<String> urls = note.getOpenGraphData().stream()
+                        .map(OpenGraphData::getUrl)
+                        .collect(Collectors.toList());
+                newNoteDTO.setUrls(urls);
+            } else {
+                newNoteDTO.setUrls(new ArrayList<>());
+            }
+            
             newNoteDTO.setTitle(note.getTitle());
             newNoteDTO.setCreatedAt(note.getCreatedAt());
             newNoteDTO.setChangedAt(note.getChangedAt());

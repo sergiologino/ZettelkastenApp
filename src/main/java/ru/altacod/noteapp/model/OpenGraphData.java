@@ -63,8 +63,8 @@ public class OpenGraphData {
         return url;
     }
 
-    public void setUrl(Object url) {
-        this.url = url.toString();
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     public String getTitle() {

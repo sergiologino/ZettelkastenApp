@@ -657,15 +657,15 @@ public class NoteService {
             OpenGraphData ogData = new OpenGraphData();
             ogData.setUrl(truncate(url, 255)); // урезаем URL
             ogData.setTitle(truncate(getMetaTagContent(document, "og:title"), 255));
-            if (ogData.getTitle().isEmpty()) {
-                ogData.setTitle(ogData.getUrl().toString()); // Используем title, если OpenGraph теги отсутствуют
+            if (ogData.getTitle() == null || ogData.getTitle().isEmpty()) {
+                ogData.setTitle(ogData.getUrl()); // Используем URL, если OpenGraph теги отсутствуют
             }
             ogData.setDescription(truncate(getMetaTagContent(document, "og:description"), 255));
             ogData.setImage(truncate(getMetaTagContent(document, "og:image"), 255));
             ogData.setNote(note);
             ogData.setUserId(note.getUser().getId());
+            ogData.setCreatedAt(LocalDateTime.now()); // Устанавливаем время создания
             System.out.println("Успешно заполнен userID: " + ogData.getUserId());
-//            openGraphDataRepository.save(ogData);
 
             System.out.println("Успешно загружены OpenGraph данные: " + ogData.getTitle());
 
@@ -806,6 +806,7 @@ public class NoteService {
         return projectGroupNote;
     }
 
+    // Обновляем заметку
     @Transactional
     public Note updateNote(Note existingNote, NoteDTO noteDTO) {
         // Обновляем основные данные
@@ -835,19 +836,32 @@ public class NoteService {
         // Обновляем OpenGraph ссылки
         List<String> newUrls = new ArrayList<>(noteDTO.getUrls());
         if(!newUrls.isEmpty()) {
-            existingNote.getOpenGraphData().removeIf(data -> !newUrls.contains(data.getUrl()));
-            List<String> existingUrls = existingNote.getOpenGraphData().stream()
+            // Создаем новый modifiable список для избежания UnsupportedOperationException
+            List<OpenGraphData> currentOpenGraphData = new ArrayList<>(existingNote.getOpenGraphData());
+            
+            // Удаляем OpenGraphData, которые больше не в списке URL
+            currentOpenGraphData.removeIf(data -> !newUrls.contains(data.getUrl()));
+            
+            // Получаем существующие URL
+            List<String> existingUrls = currentOpenGraphData.stream()
                     .map(OpenGraphData::getUrl)
                     .collect(Collectors.toList());
-            newUrls.stream()
-                    .filter(url -> !existingUrls.contains(url))
-                    .map(url -> fetchOpenGraphData(url, existingNote))
-                    .filter(Objects::nonNull)
-                    .forEach(existingNote.getOpenGraphData()::add);
+            
+            // Добавляем новые OpenGraphData для URL, которых еще нет
+            for (String url : newUrls) {
+                if (!existingUrls.contains(url)) {
+                    OpenGraphData newOgData = fetchOpenGraphData(url, existingNote);
+                    if (newOgData != null) {
+                        // Сохраняем новое OpenGraphData в базу данных
+                        newOgData = openGraphDataRepository.save(newOgData);
+                        currentOpenGraphData.add(newOgData);
+                    }
+                }
+            }
+            
+            // Обновляем список в заметке
+            existingNote.setOpenGraphData(currentOpenGraphData);
         }
-
-
-
 
         return noteRepository.save(existingNote);
     }
