@@ -826,28 +826,35 @@ public class NoteService {
             audio.setNote(existingNote);
         }
 
-        // Обновляем теги
+        // Обновляем теги (clear + addAll)
         List<Tag> updatedTags = tagService.getTagsByNameAndUserId(noteDTO.getTags(), existingNote.getUser().getId());
-        if (!updatedTags.isEmpty()) {
-            existingNote.setTags(updatedTags);
-        };
-
-        // Обновляем OpenGraph ссылки
-        List<String> newUrls = new ArrayList<>(noteDTO.getUrls());
-        if(!newUrls.isEmpty()) {
-            existingNote.getOpenGraphData().removeIf(data -> !newUrls.contains(data.getUrl()));
-            List<String> existingUrls = existingNote.getOpenGraphData().stream()
-                    .map(OpenGraphData::getUrl)
-                    .collect(Collectors.toList());
-            newUrls.stream()
-                    .filter(url -> !existingUrls.contains(url))
-                    .map(url -> fetchOpenGraphData(url, existingNote))
-                    .filter(Objects::nonNull)
-                    .forEach(existingNote.getOpenGraphData()::add);
+        existingNote.getTags().clear();
+        if (updatedTags != null) {
+            existingNote.getTags().addAll(updatedTags);
         }
 
-
-
+        // Обновляем OpenGraph ссылки
+        List<String> newUrls = noteDTO.getUrls();
+        // Удаляем те OpenGraphData, которых больше нет в списке URL-адресов
+        Iterator<OpenGraphData> iterator = existingNote.getOpenGraphData().iterator();
+        while (iterator.hasNext()) {
+            OpenGraphData existingOg = iterator.next();
+            if (!newUrls.contains(existingOg.getUrl())) {
+                iterator.remove();
+            }
+        }
+        // Добавляем только новые URL, которых еще нет
+        List<String> currentUrls = existingNote.getOpenGraphData().stream()
+                .map(OpenGraphData::getUrl)
+                .collect(Collectors.toList());
+        for (String url : newUrls) {
+            if (!currentUrls.contains(url)) {
+                OpenGraphData newData = fetchOpenGraphData(url, existingNote);
+                if (newData != null) {
+                    existingNote.getOpenGraphData().add(newData);
+                }
+            }
+        }
 
         return noteRepository.save(existingNote);
     }
