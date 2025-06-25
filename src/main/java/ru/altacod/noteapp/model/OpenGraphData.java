@@ -101,7 +101,5 @@ public class OpenGraphData {
         // что предотвращает проблемы с объектами до их сохранения в БД.
         return getClass().hashCode();
     }
-}
-
 
 }
