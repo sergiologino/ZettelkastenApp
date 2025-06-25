@@ -49,8 +49,9 @@ public class SecurityConfig {
                                 "/api/auth/sync",
                                 "/api/auth/**",
                                 "/api/notes/download/audio/**",
-                                "/api/notes/download/file/**"
-
+                                "/api/notes/download/file/**",
+                                "/uploads/**",
+                                "/api/users/debug/uploads/**"
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // Разрешаем preflight-запросы
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/notes/mixed").permitAll() // Разрешить запрос
