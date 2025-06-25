@@ -45,17 +45,14 @@ public class UserController {
         response.put("tlgUsername", user.getTlgUsername());
         response.put("phoneNumber", user.getPhoneNumber());
 
-        // Преобразуем avatar в Base64
-        if (user.getAvatar() != null && user.getAvatar().length > 0) {
+        // Корректно возвращаем avatarUrl
+        if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+            response.put("avatarUrl", user.getAvatarUrl());
+        } else if (user.getAvatar() != null && user.getAvatar().length > 0) {
             String base64Avatar = "data:image/png;base64," + Base64.getEncoder().encodeToString(user.getAvatar());
             response.put("avatarUrl", base64Avatar);
         } else {
-            response.put("avatarUrl", "/default-avatar.png"); // Добавляем путь по умолчанию
-        }
-
-        // Проверяем, установлен ли аватар
-        if (user.getAvatarUrl() == null || user.getAvatarUrl().isEmpty()) {
-            user.setAvatarUrl("/default-avatar.png"); // Устанавливаем путь по умолчанию
+            response.put("avatarUrl", "/default-avatar.png");
         }
         return ResponseEntity.ok(response);
     }
