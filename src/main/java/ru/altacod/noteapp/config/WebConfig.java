@@ -38,7 +38,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String uploadsPath = System.getProperty("user.dir") + "/uploads/";
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:uploads/");
+                .addResourceLocations("file:" + uploadsPath);
     }
 }
