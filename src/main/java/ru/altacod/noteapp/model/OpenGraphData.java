@@ -7,6 +7,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+// Тестовая строка для проверки
 @Entity
 @Table(name = "open_graph_data", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"note_id", "url"})})
@@ -15,6 +16,7 @@ public class OpenGraphData {
     @Setter
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    
     private UUID id;
 
     @Column(name="url", nullable = false)
@@ -83,6 +85,7 @@ public class OpenGraphData {
         return note;
     }
 
+    
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -98,5 +101,7 @@ public class OpenGraphData {
         // что предотвращает проблемы с объектами до их сохранения в БД.
         return getClass().hashCode();
     }
+}
+
 
 }
