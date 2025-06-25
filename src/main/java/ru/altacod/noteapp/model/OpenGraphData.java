@@ -16,7 +16,7 @@ public class OpenGraphData {
     @Setter
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    
+
     private UUID id;
 
     @Column(name="url", nullable = false)
