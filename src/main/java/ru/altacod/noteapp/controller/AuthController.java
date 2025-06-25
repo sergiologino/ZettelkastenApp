@@ -66,8 +66,8 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "Авторизация пользователя", description = "Авторизация пользователя и выдача токенов")
     public ResponseEntity<Map<String, String>> login(@RequestBody User user) {
-//        System.out.println("Попытка авторизации: " + user.getUsername());
-//        System.out.println("Введенный пароль: " + user.getPassword());
+    //    System.out.println("Попытка авторизации: " + user.getUsername());
+    //    System.out.println("Введенный пароль: " + user.getPassword());
 
         return userService.findByUsername(user.getUsername())
                 .map(u -> {
@@ -217,39 +217,7 @@ public class AuthController {
     }
 
 
-    //    @PostMapping("/sync")
-//        public ResponseEntity<String> syncUser(@RequestBody User user) {
-//
-//
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//
-//        if (authentication != null) {
-//            String currentUser = authentication.getName();
-////            System.out.println("Пользователь, выполняющий синхронизацию: " + currentUser);
-//        } else {
-//            userService.registerUser(user);
-////            System.out.println("✅ Новый пользователь зарегистрирован в syncUser.");
-//
-//
-//
-//
-//            // ✅ Создаём проект "Главное" для пользователя
-//            Project defaultProject = new Project();
-//            defaultProject.setName("Мой проект");
-//            defaultProject.setDescription("Проект по умолчанию");
-//            defaultProject.setColor("#BD10E0");
-//            defaultProject.setPosition(1);
-//            defaultProject.setDefault(true);
-//            defaultProject.setUserId(user.getId());
-//            defaultProject.setCreatedAt(LocalDateTime.now());
-//
-//            projectRepository.save(defaultProject);
-//
-//        }
-//
-//            return ResponseEntity.ok("Пользователь успешно синхронизирован.");
-//        }
-//    }
+
     @PostMapping("/sync")
     public ResponseEntity<User> sync(@RequestHeader("Authorization") String tokenHeader) {
         try {

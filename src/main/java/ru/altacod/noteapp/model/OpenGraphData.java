@@ -63,8 +63,8 @@ public class OpenGraphData {
         return url;
     }
 
-    public void setUrl(Object url) {
-        this.url = url.toString();
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     public String getTitle() {
@@ -81,6 +81,22 @@ public class OpenGraphData {
 
     public Note getNote() {
         return note;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        OpenGraphData that = (OpenGraphData) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        // Возвращаем хэш-код класса для всех экземпляров.
+        // Это заставит Hibernate всегда использовать equals() для сравнения,
+        // что предотвращает проблемы с объектами до их сохранения в БД.
+        return getClass().hashCode();
     }
 
 }
