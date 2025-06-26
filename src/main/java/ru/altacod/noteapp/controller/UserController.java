@@ -11,6 +11,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.io.IOException;
 
 import java.util.*;
 
@@ -45,17 +51,14 @@ public class UserController {
         response.put("tlgUsername", user.getTlgUsername());
         response.put("phoneNumber", user.getPhoneNumber());
 
-        // Преобразуем avatar в Base64
-        if (user.getAvatar() != null && user.getAvatar().length > 0) {
+        // Корректно возвращаем avatarUrl
+        if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+            response.put("avatarUrl", user.getAvatarUrl());
+        } else if (user.getAvatar() != null && user.getAvatar().length > 0) {
             String base64Avatar = "data:image/png;base64," + Base64.getEncoder().encodeToString(user.getAvatar());
             response.put("avatarUrl", base64Avatar);
         } else {
-            response.put("avatarUrl", "/default-avatar.png"); // Добавляем путь по умолчанию
-        }
-
-        // Проверяем, установлен ли аватар
-        if (user.getAvatarUrl() == null || user.getAvatarUrl().isEmpty()) {
-            user.setAvatarUrl("/default-avatar.png"); // Устанавливаем путь по умолчанию
+            response.put("avatarUrl", "/default-avatar.png");
         }
         return ResponseEntity.ok(response);
     }
@@ -103,5 +106,19 @@ public class UserController {
     public User getUserByUserId(UUID userId) {
         User existingUser = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("Пользователь с ID " + userId + " не найден."));
         return existingUser;
+    }
+
+    // === DEBUG: отдача файлов напрямую ===
+    @GetMapping("/debug/uploads/{filename:.+}")
+    public ResponseEntity<Resource> getDebugFile(@PathVariable String filename) throws IOException {
+        Path file = Paths.get(System.getProperty("user.dir"), "uploads", filename);
+        Resource resource = new UrlResource(file.toUri());
+        if (resource.exists() && resource.isReadable()) {
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                    .body(resource);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 }
