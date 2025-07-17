@@ -1,20 +1,16 @@
 package ru.altacod.noteapp.bot;
 
 import jakarta.annotation.PostConstruct;
-import jakarta.persistence.EntityNotFoundException;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 import ru.altacod.noteapp.model.Project;
 import ru.altacod.noteapp.model.User;
 import ru.altacod.noteapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
@@ -25,7 +21,6 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.altacod.noteapp.service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.altacod.noteapp.model.Note;
-import ru.altacod.noteapp.service.TelegramService;
 
 import java.io.File;
 import java.io.InputStream;
@@ -49,6 +44,13 @@ public class NoteBot extends TelegramLongPollingBot {
 
     @Value("${telegram.bot.username}")
     private String botUsername;
+
+    @PostConstruct
+    public void printBotToken() {
+        System.out.println("TELEGRAM_BOT_TOKEN: " + botToken);
+        System.out.println("TELEGRAM_BOT_USERNAME: " + botUsername);
+    }
+
 
     @Value("${backend.url}")
     private String backendUrl;
