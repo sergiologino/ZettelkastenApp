@@ -14,8 +14,16 @@ import ru.altacod.noteapp.service.ProjectService;
 @ConditionalOnProperty(name = "telegram.bot.enabled", havingValue = "true", matchIfMissing = true)
 public class TelegramBotConfig {
 
+
     @Value("${telegram.bot.enabled:true}")
     private boolean botEnabled;
+
+    @Value("${telegram.bot.token}")
+    private String botToken;
+
+
+    @Value("${telegram.bot.username}")
+    private String botUsername;
 
     private final UserRepository userRepository;  // 👈 Добавляем зависимость
     private final ProjectService projectService;
@@ -38,16 +46,16 @@ public class TelegramBotConfig {
             return null; // не регистрируем бота
         }
         String projectId = null;
-        NoteBot bot = new NoteBot(userRepository , projectService);
+        NoteBot bot = new NoteBot(botToken, botUsername, userRepository , projectService);
         telegramBotsApi.registerBot(bot);
         return bot;
     }
 
-    @Value("${telegram.bot.token}")
-    private String botToken;
-
-    @Value("${telegram.bot.username}")
-    private String botUsername;
+//    @Value("${telegram.bot.token}")
+//    private String botToken;
+//
+//    @Value("${telegram.bot.username}")
+//    private String botUsername;
 
     @Bean
     public TelegramBotsApi telegramBotsApi() throws Exception {

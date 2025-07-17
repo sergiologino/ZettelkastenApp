@@ -46,6 +46,7 @@ import java.util.stream.Collectors;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import java.time.format.DateTimeFormatter;
+import org.springframework.context.annotation.Lazy;
 
 
 
@@ -73,6 +74,7 @@ public class NoteService {
 
     private final TagService tagService;
     private final IntegrationService integrationService;
+    @Lazy
     private final TelegramService telegramService;
     private final ProjectService projectService;
 
@@ -85,7 +87,7 @@ public class NoteService {
 //    private final NoteFileDTO noteFileDTO;
 
 
-    public NoteService(NoteRepository noteRepository, NoteConverter noteConverter, TagService tagService, IntegrationService integrationService, TelegramService telegramService, ProjectService projectService, OpenGraphDataRepository openGraphDataRepository, UserRepository userRepository, NoteAudioRepository noteAudioRepository,
+    public NoteService(NoteRepository noteRepository, NoteConverter noteConverter, TagService tagService, IntegrationService integrationService, @Lazy TelegramService telegramService, ProjectService projectService, OpenGraphDataRepository openGraphDataRepository, UserRepository userRepository, NoteAudioRepository noteAudioRepository,
                        NoteFileRepository noteFileRepository) {
 
         this.noteRepository = noteRepository;

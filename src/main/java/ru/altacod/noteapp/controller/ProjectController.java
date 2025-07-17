@@ -26,6 +26,11 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(value = "/api/projects", produces = "application/json")
+// @CrossOrigin(origins = {
+//         "http://localhost:3000",
+//         "https://sergiologino-note-app-new-design-eaa6.twc1.net",
+//         "https://altanote.ru"
+// })
 public class ProjectController {
 
     @PostConstruct

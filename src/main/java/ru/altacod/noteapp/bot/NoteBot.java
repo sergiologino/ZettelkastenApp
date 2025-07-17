@@ -1,20 +1,16 @@
 package ru.altacod.noteapp.bot;
 
 import jakarta.annotation.PostConstruct;
-import jakarta.persistence.EntityNotFoundException;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 import ru.altacod.noteapp.model.Project;
 import ru.altacod.noteapp.model.User;
 import ru.altacod.noteapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
@@ -23,6 +19,8 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.altacod.noteapp.service.ProjectService;
+import org.springframework.beans.factory.annotation.Autowired;
+import ru.altacod.noteapp.model.Note;
 
 import java.io.File;
 import java.io.InputStream;
@@ -47,15 +45,26 @@ public class NoteBot extends TelegramLongPollingBot {
     @Value("${telegram.bot.username}")
     private String botUsername;
 
+    @PostConstruct
+    public void printBotToken() {
+        System.out.println("TELEGRAM_BOT_TOKEN: " + botToken);
+        System.out.println("TELEGRAM_BOT_USERNAME: " + botUsername);
+    }
+
+
     @Value("${backend.url}")
     private String backendUrl;
 
     private final Map<String, Message> projectSelectionCache = new HashMap<>();
 
+    @Autowired
+    private ru.altacod.noteapp.service.TelegramService telegramService;
 
-    public NoteBot(UserRepository userRepository, ProjectService projectService) {
+    public NoteBot(String botToken, String botUsername, UserRepository userRepository, ProjectService projectService) {
         this.userRepository = userRepository;
         this.projectService = projectService;
+        this.botToken = botToken;
+        this.botUsername = botUsername;
 
     }
 
@@ -68,9 +77,6 @@ public class NoteBot extends TelegramLongPollingBot {
     }
 
 
-//    public User getCurrentUser() {
-//
-//    }
     @Override
     public String getBotUsername() {
         return botUsername;
@@ -331,9 +337,39 @@ public class NoteBot extends TelegramLongPollingBot {
                                         User user,
                                         UUID projectId) {
         try {
+            // Используем TelegramService для создания заметки
+            Note createdNote = telegramService.addNoteFromTelegram(
+                    caption,
+                    content,
+                    links,
+                    audioFiles,
+                    noteFiles,
+                    user,
+                    projectId
+            );
+            
+            System.out.println("✅ Заметка успешно создана через TelegramService: " + createdNote.getId());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Ошибка при создании заметки через TelegramService: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Fallback: используем старый метод с REST API
+            sendMixedNoteToBackendViaRest(caption, content, links, audioFiles, noteFiles, user, projectId);
+        }
+    }
+
+    /**
+     * Резервный метод для создания заметки через REST API
+     */
+    private void sendMixedNoteToBackendViaRest(String caption, String content, List<String> links,
+                                        List<Map<String, Object>> audioFiles,
+                                        List<Map<String, Object>> noteFiles,
+                                        User user,
+                                        UUID projectId) {
+        try {
             RestTemplate restTemplate = new RestTemplate();
             Map<String, Object> requestBody = new HashMap<>();
-
 
             if (content != null) {
                 requestBody.put("content", content);
@@ -360,7 +396,9 @@ public class NoteBot extends TelegramLongPollingBot {
                     requestBody,
                     String.class
             );
+            System.out.println("✅ Заметка создана через REST API (fallback)");
         } catch (Exception e) {
+            System.err.println("❌ Ошибка при создании заметки через REST API: " + e.getMessage());
             e.printStackTrace();
         }
     }

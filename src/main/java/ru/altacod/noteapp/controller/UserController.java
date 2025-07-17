@@ -22,7 +22,11 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:3000")
+// @CrossOrigin(origins = {
+//         "http://localhost:3000",
+//         "https://sergiologino-note-app-new-design-eaa6.twc1.net",
+//         "https://altanote.ru"
+// })
 public class UserController {
 
     private final UserRepository userRepository;
