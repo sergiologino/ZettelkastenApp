@@ -60,9 +60,11 @@ public class NoteBot extends TelegramLongPollingBot {
     @Autowired
     private ru.altacod.noteapp.service.TelegramService telegramService;
 
-    public NoteBot(UserRepository userRepository, ProjectService projectService) {
+    public NoteBot(String botToken, String botUsername, UserRepository userRepository, ProjectService projectService) {
         this.userRepository = userRepository;
         this.projectService = projectService;
+        this.botToken = botToken;
+        this.botUsername = botUsername;
 
     }
 
@@ -75,9 +77,6 @@ public class NoteBot extends TelegramLongPollingBot {
     }
 
 
-//    public User getCurrentUser() {
-//
-//    }
     @Override
     public String getBotUsername() {
         return botUsername;

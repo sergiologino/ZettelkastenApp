@@ -21,6 +21,7 @@ public class TelegramBotConfig {
     @Value("${telegram.bot.token}")
     private String botToken;
 
+
     @Value("${telegram.bot.username}")
     private String botUsername;
 
@@ -45,7 +46,7 @@ public class TelegramBotConfig {
             return null; // не регистрируем бота
         }
         String projectId = null;
-        NoteBot bot = new NoteBot(userRepository , projectService);
+        NoteBot bot = new NoteBot(botToken, botUsername, userRepository , projectService);
         telegramBotsApi.registerBot(bot);
         return bot;
     }
