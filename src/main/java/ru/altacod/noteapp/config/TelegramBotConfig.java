@@ -51,11 +51,6 @@ public class TelegramBotConfig {
         return bot;
     }
 
-//    @Value("${telegram.bot.token}")
-//    private String botToken;
-//
-//    @Value("${telegram.bot.username}")
-//    private String botUsername;
 
     @Bean
     public TelegramBotsApi telegramBotsApi() throws Exception {
