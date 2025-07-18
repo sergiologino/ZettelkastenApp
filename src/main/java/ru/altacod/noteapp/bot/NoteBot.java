@@ -60,6 +60,7 @@ public class NoteBot extends TelegramLongPollingBot {
     @Autowired
     private ru.altacod.noteapp.service.TelegramService telegramService;
 
+    // добавляем токен и username
     public NoteBot(String botToken, String botUsername, UserRepository userRepository, ProjectService projectService) {
         this.userRepository = userRepository;
         this.projectService = projectService;
