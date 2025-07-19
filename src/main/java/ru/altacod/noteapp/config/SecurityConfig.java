@@ -48,6 +48,8 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/api/auth/sync",
                                 "/api/auth/**",
+                                "/oauth2/authorize/yandex",
+                                "/login/oauth2/code/yandex",
                                 "/api/notes/download/audio/**",
                                 "/api/notes/download/file/**",
                                 "/uploads/**",
@@ -74,12 +76,12 @@ public class SecurityConfig {
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
-                .oauth2Login(oauth2 -> oauth2
-//                        .loginPage("/oauth2/authorization/yandex") // Настройка Yandex OAuth2
-                        .loginPage("/login/oauth2/code/yandex") // Настройка Yandex OAuth2
-                        .defaultSuccessUrl("/dashboard")
-                        .failureUrl("/auth?error")
-                )
+                // Убираем oauth2Login, так как используем кастомную обработку
+                // .oauth2Login(oauth2 -> oauth2
+                //         .loginPage("/login/oauth2/code/yandex") // Настройка Yandex OAuth2
+                //         .defaultSuccessUrl("http://localhost:3000/")
+                //         .failureUrl("http://localhost:3000/auth?error=oauth")
+                // )
                 .logout(logout -> logout
                         .logoutSuccessUrl("/auth")
                         .invalidateHttpSession(true)

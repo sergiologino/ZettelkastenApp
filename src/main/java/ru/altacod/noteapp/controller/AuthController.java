@@ -119,17 +119,17 @@ public class AuthController {
     //  /auth/oauth2/${provider}/callback
     @GetMapping("/login/oauth2/code/yandex")
     @Operation(summary = "Обработка редиректа от Яндекса")
-    public ResponseEntity<String> handleYandexCallback(
+    public ResponseEntity<Void> handleYandexCallback(
             @RequestParam("code") String code,
             @RequestParam("state") String state) {
+        System.out.println("Обработка редиректа от Яндекса, method handleYandexCallback ");
         if (!stateStore.containsKey(state)) {
-            return ResponseEntity.badRequest().body("Invalid state parameter");
+            return ResponseEntity.status(HttpStatus.FOUND)
+                .header("Location", "http://localhost:3000/auth?error=state")
+                .build();
         }
-
-        // Удаляем state, чтобы избежать повторного использования
         stateStore.remove(state);
 
-        // Отправляем запрос на получение accessToken
         RestTemplate restTemplate = new RestTemplate();
         String tokenUri = "https://oauth.yandex.ru/token";
 
@@ -141,22 +141,179 @@ public class AuthController {
         body.add("code", code);
         body.add("client_id", "a0bc7b7381a84739be01111f12d9447e");
         body.add("client_secret", "c0701b6fad07403c8a8b6f9e99874e1f");
-        body.add("redirect_uri", "https://sergiologino-zettelkastenapp-19f3.twc1.net/login/oauth2/code/yandex");
+//        body.add("redirect_uri", "https://sergiologino-zettelkastenapp-19f3.twc1.net/login/oauth2/code/yandex");
+        body.add("redirect_uri", "https://localhost:8080/login/oauth2/code/yandex");
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
         System.out.println("Запрос на Яндекс: " + request);
 
         ResponseEntity<String> responseYand = restTemplate.postForEntity(tokenUri, request, String.class);
 
-
         if (responseYand.getStatusCode().is2xxSuccessful()) {
-
-            String appBackendUrl = "http://sergiologino-zettelkastenapp-19f3.twc1.net/api/users/sync";
-            ResponseEntity<String> response = restTemplate.postForEntity(appBackendUrl, request, String.class);
-
-            return ResponseEntity.ok("Токен успешно получен: " + response.getBody());
+            // Можно добавить свою логику сохранения пользователя и т.д.
+            return ResponseEntity.status(HttpStatus.FOUND)
+                .header("Location", "http://localhost:3000/")
+                .build();
         } else {
-            return ResponseEntity.status(responseYand.getStatusCode()).body("Ошибка получения токена");
+            System.out.println("Обработка редиректа от Яндекса не сработала, method handleYandexCallback ");
+            return ResponseEntity.status(HttpStatus.FOUND)
+                .header("Location", "http://localhost:3000/auth?error=oauth")
+                .build();
+        }
+    }
+
+    @GetMapping("/yandex/callback")
+    @Operation(summary = "Обработка OAuth callback от фронтенда для Яндекса")
+    public ResponseEntity<Map<String, Object>> handleYandexFrontendCallback(
+            @RequestParam("code") String code) {
+        try {
+            System.out.println("Обработка OAuth callback от фронтенда для Яндекса");
+            
+            // Обмен code на access token
+            RestTemplate restTemplate = new RestTemplate();
+            String tokenUri = "https://oauth.yandex.ru/token";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("grant_type", "authorization_code");
+            body.add("code", code);
+            body.add("client_id", "a0bc7b7381a84739be01111f12d9447e");
+            body.add("client_secret", "c0701b6fad07403c8a8b6f9e99874e1f");
+            body.add("redirect_uri", "http://localhost:3000/auth/yandex/callback");
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+            
+            ResponseEntity<String> responseYand = restTemplate.postForEntity(tokenUri, request, String.class);
+
+            if (!responseYand.getStatusCode().is2xxSuccessful()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Ошибка получения токена от Яндекса"));
+            }
+
+            // Парсим JSON ответ от Яндекса
+            String responseBody = responseYand.getBody();
+            // Простой парсинг JSON для получения access_token
+            String accessToken = null;
+            if (responseBody != null && responseBody.contains("access_token")) {
+                // Извлекаем access_token из JSON ответа
+                int startIndex = responseBody.indexOf("\"access_token\":\"") + 16;
+                int endIndex = responseBody.indexOf("\"", startIndex);
+                if (startIndex > 15 && endIndex > startIndex) {
+                    accessToken = responseBody.substring(startIndex, endIndex);
+                }
+            }
+
+            if (accessToken == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Не удалось получить access_token от Яндекса"));
+            }
+
+            // Получаем информацию о пользователе от Яндекса
+            String userInfoUri = "https://login.yandex.ru/info";
+            HttpHeaders userInfoHeaders = new HttpHeaders();
+            userInfoHeaders.set("Authorization", "OAuth " + accessToken);
+            
+            HttpEntity<String> userInfoRequest = new HttpEntity<>(userInfoHeaders);
+            ResponseEntity<String> userInfoResponse = restTemplate.exchange(
+                userInfoUri, 
+                HttpMethod.GET, 
+                userInfoRequest, 
+                String.class
+            );
+
+            if (!userInfoResponse.getStatusCode().is2xxSuccessful()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Ошибка получения информации о пользователе"));
+            }
+
+            // Парсим информацию о пользователе
+            String userInfoBody = userInfoResponse.getBody();
+            String email = null;
+            String username = null;
+            String realName = null;
+
+            if (userInfoBody != null) {
+                // Извлекаем email
+                if (userInfoBody.contains("\"default_email\":")) {
+                    int startIndex = userInfoBody.indexOf("\"default_email\":\"") + 17;
+                    int endIndex = userInfoBody.indexOf("\"", startIndex);
+                    if (startIndex > 16 && endIndex > startIndex) {
+                        email = userInfoBody.substring(startIndex, endIndex);
+                    }
+                }
+                
+                // Извлекаем real_name
+                if (userInfoBody.contains("\"real_name\":")) {
+                    int startIndex = userInfoBody.indexOf("\"real_name\":\"") + 13;
+                    int endIndex = userInfoBody.indexOf("\"", startIndex);
+                    if (startIndex > 12 && endIndex > startIndex) {
+                        realName = userInfoBody.substring(startIndex, endIndex);
+                    }
+                }
+            }
+
+            // Определяем username (email или real_name)
+            if (email != null) {
+                username = email;
+            } else if (realName != null) {
+                username = realName.replaceAll("\\s+", "_").toLowerCase();
+            } else {
+                username = "yandex_user_" + System.currentTimeMillis();
+            }
+
+            // Ищем или создаем пользователя в БД
+            User user = userRepository.findByUsername(username);
+            if (user == null) {
+                // Создаем нового пользователя (автоматическая регистрация)
+                user = new User();
+                user.setUsername(username);
+                user.setEmail(email);
+                
+                // Генерируем случайный пароль (пользователь будет входить через OAuth)
+                String randomPassword = UUID.randomUUID().toString();
+                user.setPassword(passwordEncoder.encode(randomPassword));
+                
+                user = userService.registerUser(user);
+                
+                // Создаем проект по умолчанию для нового пользователя
+                Project defaultProject = new Project();
+                defaultProject.setName("Мой проект");
+                defaultProject.setDescription("Проект по умолчанию");
+                defaultProject.setColor("#BD10E0");
+                defaultProject.setPosition(1);
+                defaultProject.setDefault(true);
+                defaultProject.setUserId(user.getId());
+                defaultProject.setCreatedAt(LocalDateTime.now());
+                
+                projectRepository.save(defaultProject);
+                
+                System.out.println("Создан новый пользователь через Яндекс OAuth: " + username);
+            } else {
+                System.out.println("Найден существующий пользователь: " + username);
+            }
+
+            // Генерируем JWT токены
+            String jwtAccessToken = jwtTokenProvider.generateAccessToken(username);
+            String jwtRefreshToken = jwtTokenProvider.generateRefreshToken(username);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("accessToken", jwtAccessToken);
+            response.put("refreshToken", jwtRefreshToken);
+            response.put("user", Map.of(
+                "id", user.getId().toString(),
+                "username", user.getUsername(),
+                "email", user.getEmail()
+            ));
+
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("Ошибка при обработке Yandex callback: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Внутренняя ошибка сервера"));
         }
     }
 
