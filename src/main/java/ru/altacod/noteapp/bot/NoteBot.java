@@ -36,7 +36,6 @@ import java.util.*;
 public class NoteBot extends TelegramLongPollingBot {
 
     private final UserRepository userRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
     private final ProjectService projectService;
 
     @Value("${telegram.bot.token}")
@@ -60,23 +59,15 @@ public class NoteBot extends TelegramLongPollingBot {
     @Autowired
     private ru.altacod.noteapp.service.TelegramService telegramService;
 
-    // добавляем токен и username
-    public NoteBot(String botToken, String botUsername, UserRepository userRepository, ProjectService projectService) {
+    public NoteBot(@Value("${telegram.bot.token}") String botToken,
+                   @Value("${telegram.bot.username}") String botUsername,
+                   UserRepository userRepository, ProjectService projectService) {
         this.userRepository = userRepository;
         this.projectService = projectService;
         this.botToken = botToken;
         this.botUsername = botUsername;
 
     }
-
-    public UUID getCurrentUserId(String username) {
-        Optional<User> currentUser=userRepository.findByTlgUsername(username.replace("@", ""));
-        if(currentUser.isPresent()) {
-            return currentUser.get().getId();
-        }
-        return null;
-    }
-
 
     @Override
     public String getBotUsername() {
@@ -163,7 +154,7 @@ public class NoteBot extends TelegramLongPollingBot {
                         // Если chatId не найден, пробуем найти по ID
                         sendResponse(chatId, "Ошибка: пользователь не найден.");
                         return;
-                    };
+                    }
             User user = optionalUser.get();
 
 
@@ -319,7 +310,7 @@ public class NoteBot extends TelegramLongPollingBot {
         }
 
 
-        // Отправка на бэкенд
+        // Отправка на бэк
         sendMixedNoteToBackend(
                 caption != null ? caption : "Новая заметка из Telegram",
                 text,
@@ -376,12 +367,12 @@ public class NoteBot extends TelegramLongPollingBot {
                 requestBody.put("content", content);
             }else{
                 requestBody.put("content", "message from telegram");
-            };
+            }
             if (caption != null) {
                 requestBody.put("caption", caption);
             }else{
                 requestBody.put("caption", "caption");
-            };
+            }
 
             if (!links.isEmpty()) requestBody.put("openGraph", links);
             if (!audioFiles.isEmpty()) requestBody.put("audios", audioFiles);
