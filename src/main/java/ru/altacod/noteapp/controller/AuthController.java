@@ -167,7 +167,8 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> handleYandexFrontendCallback(
             @RequestParam("code") String code) {
         try {
-            System.out.println("Обработка OAuth callback от фронтенда для Яндекса");
+            System.out.println("=== НАЧАЛО ОБРАБОТКИ YANDEX CALLBACK ===");
+            System.out.println("Получен код: " + code);
             
             // Обмен code на access token
             RestTemplate restTemplate = new RestTemplate();
@@ -183,17 +184,30 @@ public class AuthController {
             body.add("client_secret", "c0701b6fad07403c8a8b6f9e99874e1f");
             body.add("redirect_uri", "http://localhost:3000/auth/yandex/callback");
 
+            System.out.println("Отправляем запрос на Яндекс с параметрами:");
+            System.out.println("- grant_type: authorization_code");
+            System.out.println("- code: " + code);
+            System.out.println("- client_id: a0bc7b7381a84739be01111f12d9447e");
+            System.out.println("- redirect_uri: http://localhost:3000/auth/yandex/callback");
+
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
             
             ResponseEntity<String> responseYand = restTemplate.postForEntity(tokenUri, request, String.class);
 
+            System.out.println("Ответ от Яндекса:");
+            System.out.println("- Статус: " + responseYand.getStatusCode());
+            System.out.println("- Тело ответа: " + responseYand.getBody());
+
             if (!responseYand.getStatusCode().is2xxSuccessful()) {
+                System.err.println("ОШИБКА: Яндекс вернул не успешный статус: " + responseYand.getStatusCode());
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Ошибка получения токена от Яндекса"));
+                    .body(Map.of("error", "Ошибка получения токена от Яндекса: " + responseYand.getStatusCode()));
             }
 
             // Парсим JSON ответ от Яндекса
             String responseBody = responseYand.getBody();
+            System.out.println("Парсим ответ от Яндекса: " + responseBody);
+            
             // Простой парсинг JSON для получения access_token
             String accessToken = null;
             if (responseBody != null && responseBody.contains("access_token")) {
@@ -202,15 +216,18 @@ public class AuthController {
                 int endIndex = responseBody.indexOf("\"", startIndex);
                 if (startIndex > 15 && endIndex > startIndex) {
                     accessToken = responseBody.substring(startIndex, endIndex);
+                    System.out.println("Извлечен access_token: " + accessToken.substring(0, Math.min(10, accessToken.length())) + "...");
                 }
             }
 
             if (accessToken == null) {
+                System.err.println("ОШИБКА: Не удалось извлечь access_token из ответа Яндекса");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Не удалось получить access_token от Яндекса"));
             }
 
             // Получаем информацию о пользователе от Яндекса
+            System.out.println("Получаем информацию о пользователе от Яндекса...");
             String userInfoUri = "https://login.yandex.ru/info";
             HttpHeaders userInfoHeaders = new HttpHeaders();
             userInfoHeaders.set("Authorization", "OAuth " + accessToken);
@@ -223,7 +240,12 @@ public class AuthController {
                 String.class
             );
 
+            System.out.println("Ответ с информацией о пользователе:");
+            System.out.println("- Статус: " + userInfoResponse.getStatusCode());
+            System.out.println("- Тело ответа: " + userInfoResponse.getBody());
+
             if (!userInfoResponse.getStatusCode().is2xxSuccessful()) {
+                System.err.println("ОШИБКА: Не удалось получить информацию о пользователе: " + userInfoResponse.getStatusCode());
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Ошибка получения информации о пользователе"));
             }
@@ -241,6 +263,7 @@ public class AuthController {
                     int endIndex = userInfoBody.indexOf("\"", startIndex);
                     if (startIndex > 16 && endIndex > startIndex) {
                         email = userInfoBody.substring(startIndex, endIndex);
+                        System.out.println("Извлечен email: " + email);
                     }
                 }
                 
@@ -250,6 +273,7 @@ public class AuthController {
                     int endIndex = userInfoBody.indexOf("\"", startIndex);
                     if (startIndex > 12 && endIndex > startIndex) {
                         realName = userInfoBody.substring(startIndex, endIndex);
+                        System.out.println("Извлечено real_name: " + realName);
                     }
                 }
             }
@@ -262,10 +286,12 @@ public class AuthController {
             } else {
                 username = "yandex_user_" + System.currentTimeMillis();
             }
+            System.out.println("Определен username: " + username);
 
             // Ищем или создаем пользователя в БД
             User user = userRepository.findByUsername(username);
             if (user == null) {
+                System.out.println("Создаем нового пользователя...");
                 // Создаем нового пользователя (автоматическая регистрация)
                 user = new User();
                 user.setUsername(username);
@@ -295,6 +321,7 @@ public class AuthController {
             }
 
             // Генерируем JWT токены
+            System.out.println("Генерируем JWT токены...");
             String jwtAccessToken = jwtTokenProvider.generateAccessToken(username);
             String jwtRefreshToken = jwtTokenProvider.generateRefreshToken(username);
 
@@ -307,13 +334,15 @@ public class AuthController {
                 "email", user.getEmail()
             ));
 
+            System.out.println("=== УСПЕШНО ЗАВЕРШЕНА ОБРАБОТКА YANDEX CALLBACK ===");
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            System.err.println("Ошибка при обработке Yandex callback: " + e.getMessage());
+            System.err.println("=== ОШИБКА ПРИ ОБРАБОТКЕ YANDEX CALLBACK ===");
+            System.err.println("Ошибка: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Внутренняя ошибка сервера"));
+                .body(Map.of("error", "Внутренняя ошибка сервера: " + e.getMessage()));
         }
     }
 
