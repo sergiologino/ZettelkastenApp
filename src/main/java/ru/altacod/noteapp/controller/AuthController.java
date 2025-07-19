@@ -21,6 +21,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -208,15 +210,44 @@ public class AuthController {
             String responseBody = responseYand.getBody();
             System.out.println("Парсим ответ от Яндекса: " + responseBody);
             
-            // Простой парсинг JSON для получения access_token
+            // Используем Jackson ObjectMapper для парсинга JSON
             String accessToken = null;
-            if (responseBody != null && responseBody.contains("access_token")) {
-                // Извлекаем access_token из JSON ответа
-                int startIndex = responseBody.indexOf("\"access_token\":\"") + 16;
-                int endIndex = responseBody.indexOf("\"", startIndex);
-                if (startIndex > 15 && endIndex > startIndex) {
-                    accessToken = responseBody.substring(startIndex, endIndex);
-                    System.out.println("Извлечен access_token: " + accessToken.substring(0, Math.min(10, accessToken.length())) + "...");
+            if (responseBody != null) {
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    JsonNode jsonNode = objectMapper.readTree(responseBody);
+                    
+                    if (jsonNode.has("access_token")) {
+                        accessToken = jsonNode.get("access_token").asText();
+                        System.out.println("Извлечен access_token (Jackson): " + accessToken.substring(0, Math.min(10, accessToken.length())) + "...");
+                    }
+                } catch (Exception e) {
+                    System.err.println("Ошибка парсинга JSON с Jackson: " + e.getMessage());
+                    
+                    // Fallback: ручной парсинг
+                    if (responseBody.contains("access_token")) {
+                        int startIndex = responseBody.indexOf("\"access_token\":\"") + 16;
+                        int endIndex = responseBody.indexOf("\"", startIndex);
+                        if (startIndex > 15 && endIndex > startIndex) {
+                            accessToken = responseBody.substring(startIndex, endIndex);
+                            System.out.println("Извлечен access_token (ручной парсинг): " + accessToken.substring(0, Math.min(10, accessToken.length())) + "...");
+                        }
+                    }
+                    
+                    if (accessToken == null) {
+                        System.err.println("Попробуем альтернативный способ парсинга...");
+                        
+                        // Альтернативный способ парсинга
+                        String[] parts = responseBody.split("\"access_token\":\"");
+                        if (parts.length > 1) {
+                            String tokenPart = parts[1];
+                            String[] tokenParts = tokenPart.split("\"");
+                            if (tokenParts.length > 0) {
+                                accessToken = tokenParts[0];
+                                System.out.println("Извлечен access_token (альтернативный способ): " + accessToken.substring(0, Math.min(10, accessToken.length())) + "...");
+                            }
+                        }
+                    }
                 }
             }
 
@@ -257,23 +288,39 @@ public class AuthController {
             String realName = null;
 
             if (userInfoBody != null) {
-                // Извлекаем email
-                if (userInfoBody.contains("\"default_email\":")) {
-                    int startIndex = userInfoBody.indexOf("\"default_email\":\"") + 17;
-                    int endIndex = userInfoBody.indexOf("\"", startIndex);
-                    if (startIndex > 16 && endIndex > startIndex) {
-                        email = userInfoBody.substring(startIndex, endIndex);
-                        System.out.println("Извлечен email: " + email);
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    JsonNode userInfoNode = objectMapper.readTree(userInfoBody);
+                    
+                    if (userInfoNode.has("default_email")) {
+                        email = userInfoNode.get("default_email").asText();
+                        System.out.println("Извлечен email (Jackson): " + email);
                     }
-                }
-                
-                // Извлекаем real_name
-                if (userInfoBody.contains("\"real_name\":")) {
-                    int startIndex = userInfoBody.indexOf("\"real_name\":\"") + 13;
-                    int endIndex = userInfoBody.indexOf("\"", startIndex);
-                    if (startIndex > 12 && endIndex > startIndex) {
-                        realName = userInfoBody.substring(startIndex, endIndex);
-                        System.out.println("Извлечено real_name: " + realName);
+                    
+                    if (userInfoNode.has("real_name")) {
+                        realName = userInfoNode.get("real_name").asText();
+                        System.out.println("Извлечено real_name (Jackson): " + realName);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Ошибка парсинга информации о пользователе с Jackson: " + e.getMessage());
+                    
+                    // Fallback: ручной парсинг
+                    if (userInfoBody.contains("\"default_email\":")) {
+                        int startIndex = userInfoBody.indexOf("\"default_email\":\"") + 17;
+                        int endIndex = userInfoBody.indexOf("\"", startIndex);
+                        if (startIndex > 16 && endIndex > startIndex) {
+                            email = userInfoBody.substring(startIndex, endIndex);
+                            System.out.println("Извлечен email (ручной парсинг): " + email);
+                        }
+                    }
+                    
+                    if (userInfoBody.contains("\"real_name\":")) {
+                        int startIndex = userInfoBody.indexOf("\"real_name\":\"") + 13;
+                        int endIndex = userInfoBody.indexOf("\"", startIndex);
+                        if (startIndex > 12 && endIndex > startIndex) {
+                            realName = userInfoBody.substring(startIndex, endIndex);
+                            System.out.println("Извлечено real_name (ручной парсинг): " + realName);
+                        }
                     }
                 }
             }
