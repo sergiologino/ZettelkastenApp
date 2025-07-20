@@ -36,7 +36,6 @@ import java.util.*;
 public class NoteBot extends TelegramLongPollingBot {
 
     private final UserRepository userRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
     private final ProjectService projectService;
 
     @Value("${telegram.bot.token}")
@@ -55,28 +54,23 @@ public class NoteBot extends TelegramLongPollingBot {
     @Value("${backend.url}")
     private String backendUrl;
 
+    @Value("${uploaded.path}")
+    private String uploadedPath;
+
     private final Map<String, Message> projectSelectionCache = new HashMap<>();
 
     @Autowired
     private ru.altacod.noteapp.service.TelegramService telegramService;
 
-    // добавляем токен и username
-    public NoteBot(String botToken, String botUsername, UserRepository userRepository, ProjectService projectService) {
+    public NoteBot(@Value("${telegram.bot.token}") String botToken,
+                   @Value("${telegram.bot.username}") String botUsername,
+                   UserRepository userRepository, ProjectService projectService) {
         this.userRepository = userRepository;
         this.projectService = projectService;
         this.botToken = botToken;
         this.botUsername = botUsername;
 
     }
-
-    public UUID getCurrentUserId(String username) {
-        Optional<User> currentUser=userRepository.findByTlgUsername(username.replace("@", ""));
-        if(currentUser.isPresent()) {
-            return currentUser.get().getId();
-        }
-        return null;
-    }
-
 
     @Override
     public String getBotUsername() {
@@ -163,7 +157,7 @@ public class NoteBot extends TelegramLongPollingBot {
                         // Если chatId не найден, пробуем найти по ID
                         sendResponse(chatId, "Ошибка: пользователь не найден.");
                         return;
-                    };
+                    }
             User user = optionalUser.get();
 
 
@@ -319,7 +313,7 @@ public class NoteBot extends TelegramLongPollingBot {
         }
 
 
-        // Отправка на бэкенд
+        // Отправка на бэк
         sendMixedNoteToBackend(
                 caption != null ? caption : "Новая заметка из Telegram",
                 text,
@@ -376,12 +370,12 @@ public class NoteBot extends TelegramLongPollingBot {
                 requestBody.put("content", content);
             }else{
                 requestBody.put("content", "message from telegram");
-            };
+            }
             if (caption != null) {
                 requestBody.put("caption", caption);
             }else{
                 requestBody.put("caption", "caption");
-            };
+            }
 
             if (!links.isEmpty()) requestBody.put("openGraph", links);
             if (!audioFiles.isEmpty()) requestBody.put("audios", audioFiles);
@@ -427,7 +421,7 @@ public class NoteBot extends TelegramLongPollingBot {
             requestBody.put("fileUrls", fileUrls);
 
             restTemplate.postForEntity(
-                    "http://localhost:8080/api/notes/bot/files",
+                    backendUrl + "/api/notes/bot/files",
                     requestBody,
                     String.class
             );
@@ -453,7 +447,7 @@ public class NoteBot extends TelegramLongPollingBot {
         try {
             RestTemplate restTemplate = new RestTemplate();
             restTemplate.postForEntity(
-                    "http://localhost:8080/api/notes/" + noteId + "/analyze?chatId=" + chatId,
+                    backendUrl + "/api/notes/" + noteId + "/analyze?chatId=" + chatId,
                     null, Void.class
             );
             sendResponse(chatId, "Заметка отправлена на анализ. Ожидайте результатов.");
@@ -483,10 +477,10 @@ private String downloadFileFromTelegram(String fileId, String folder) {
 
         // Определяем локальное имя файла
         String fileName = UUID.randomUUID() + "_" + filePath.substring(filePath.lastIndexOf("/") + 1);
-        String localFilePath = "E:/uploaded/" + folder + "/" + fileName;
+        String localFilePath = uploadedPath + "/" + folder + "/" + fileName;
 
         // Создаём папку, если её нет
-        Path savePath = Paths.get("E:/uploaded/" + folder);
+        Path savePath = Paths.get(uploadedPath + "/" + folder);
         if (!Files.exists(savePath)) {
             Files.createDirectories(savePath);
         }

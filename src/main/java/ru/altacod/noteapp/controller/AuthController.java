@@ -21,6 +21,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -119,17 +121,17 @@ public class AuthController {
     //  /auth/oauth2/${provider}/callback
     @GetMapping("/login/oauth2/code/yandex")
     @Operation(summary = "Обработка редиректа от Яндекса")
-    public ResponseEntity<String> handleYandexCallback(
+    public ResponseEntity<Void> handleYandexCallback(
             @RequestParam("code") String code,
             @RequestParam("state") String state) {
+        System.out.println("Обработка редиректа от Яндекса, method handleYandexCallback ");
         if (!stateStore.containsKey(state)) {
-            return ResponseEntity.badRequest().body("Invalid state parameter");
+            return ResponseEntity.status(HttpStatus.FOUND)
+                .header("Location", "http://localhost:3000/auth?error=state")
+                .build();
         }
-
-        // Удаляем state, чтобы избежать повторного использования
         stateStore.remove(state);
 
-        // Отправляем запрос на получение accessToken
         RestTemplate restTemplate = new RestTemplate();
         String tokenUri = "https://oauth.yandex.ru/token";
 
@@ -141,22 +143,253 @@ public class AuthController {
         body.add("code", code);
         body.add("client_id", "a0bc7b7381a84739be01111f12d9447e");
         body.add("client_secret", "c0701b6fad07403c8a8b6f9e99874e1f");
-        body.add("redirect_uri", "https://sergiologino-zettelkastenapp-19f3.twc1.net/login/oauth2/code/yandex");
+//        body.add("redirect_uri", "https://sergiologino-zettelkastenapp-19f3.twc1.net/login/oauth2/code/yandex");
+        body.add("redirect_uri", "https://localhost:8080/login/oauth2/code/yandex");
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
         System.out.println("Запрос на Яндекс: " + request);
 
         ResponseEntity<String> responseYand = restTemplate.postForEntity(tokenUri, request, String.class);
 
-
         if (responseYand.getStatusCode().is2xxSuccessful()) {
-
-            String appBackendUrl = "http://sergiologino-zettelkastenapp-19f3.twc1.net/api/users/sync";
-            ResponseEntity<String> response = restTemplate.postForEntity(appBackendUrl, request, String.class);
-
-            return ResponseEntity.ok("Токен успешно получен: " + response.getBody());
+            // Можно добавить свою логику сохранения пользователя и т.д.
+            return ResponseEntity.status(HttpStatus.FOUND)
+                .header("Location", "http://localhost:3000/")
+                .build();
         } else {
-            return ResponseEntity.status(responseYand.getStatusCode()).body("Ошибка получения токена");
+            System.out.println("Обработка редиректа от Яндекса не сработала, method handleYandexCallback ");
+            return ResponseEntity.status(HttpStatus.FOUND)
+                .header("Location", "http://localhost:3000/auth?error=oauth")
+                .build();
+        }
+    }
+
+    @GetMapping("/yandex/callback")
+    @Operation(summary = "Обработка OAuth callback от фронтенда для Яндекса")
+    public ResponseEntity<Map<String, Object>> handleYandexFrontendCallback(
+            @RequestParam("code") String code) {
+        try {
+            System.out.println("=== НАЧАЛО ОБРАБОТКИ YANDEX CALLBACK ===");
+            System.out.println("Получен код: " + code);
+            
+            // Обмен code на access token
+            RestTemplate restTemplate = new RestTemplate();
+            String tokenUri = "https://oauth.yandex.ru/token";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("grant_type", "authorization_code");
+            body.add("code", code);
+            body.add("client_id", "a0bc7b7381a84739be01111f12d9447e");
+            body.add("client_secret", "c0701b6fad07403c8a8b6f9e99874e1f");
+            body.add("redirect_uri", "http://localhost:3000/auth/yandex/callback");
+
+            System.out.println("Отправляем запрос на Яндекс с параметрами:");
+            System.out.println("- grant_type: authorization_code");
+            System.out.println("- code: " + code);
+            System.out.println("- client_id: a0bc7b7381a84739be01111f12d9447e");
+            System.out.println("- redirect_uri: http://localhost:3000/auth/yandex/callback");
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+            
+            ResponseEntity<String> responseYand = restTemplate.postForEntity(tokenUri, request, String.class);
+
+            System.out.println("Ответ от Яндекса:");
+            System.out.println("- Статус: " + responseYand.getStatusCode());
+            System.out.println("- Тело ответа: " + responseYand.getBody());
+
+            if (!responseYand.getStatusCode().is2xxSuccessful()) {
+                System.err.println("ОШИБКА: Яндекс вернул не успешный статус: " + responseYand.getStatusCode());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Ошибка получения токена от Яндекса: " + responseYand.getStatusCode()));
+            }
+
+            // Парсим JSON ответ от Яндекса
+            String responseBody = responseYand.getBody();
+            System.out.println("Парсим ответ от Яндекса: " + responseBody);
+            
+            // Используем Jackson ObjectMapper для парсинга JSON
+            String accessToken = null;
+            if (responseBody != null) {
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    JsonNode jsonNode = objectMapper.readTree(responseBody);
+                    
+                    if (jsonNode.has("access_token")) {
+                        accessToken = jsonNode.get("access_token").asText();
+                        System.out.println("Извлечен access_token (Jackson): " + accessToken.substring(0, Math.min(10, accessToken.length())) + "...");
+                    }
+                } catch (Exception e) {
+                    System.err.println("Ошибка парсинга JSON с Jackson: " + e.getMessage());
+                    
+                    // Fallback: ручной парсинг
+                    if (responseBody.contains("access_token")) {
+                        int startIndex = responseBody.indexOf("\"access_token\":\"") + 16;
+                        int endIndex = responseBody.indexOf("\"", startIndex);
+                        if (startIndex > 15 && endIndex > startIndex) {
+                            accessToken = responseBody.substring(startIndex, endIndex);
+                            System.out.println("Извлечен access_token (ручной парсинг): " + accessToken.substring(0, Math.min(10, accessToken.length())) + "...");
+                        }
+                    }
+                    
+                    if (accessToken == null) {
+                        System.err.println("Попробуем альтернативный способ парсинга...");
+                        
+                        // Альтернативный способ парсинга
+                        String[] parts = responseBody.split("\"access_token\":\"");
+                        if (parts.length > 1) {
+                            String tokenPart = parts[1];
+                            String[] tokenParts = tokenPart.split("\"");
+                            if (tokenParts.length > 0) {
+                                accessToken = tokenParts[0];
+                                System.out.println("Извлечен access_token (альтернативный способ): " + accessToken.substring(0, Math.min(10, accessToken.length())) + "...");
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (accessToken == null) {
+                System.err.println("ОШИБКА: Не удалось извлечь access_token из ответа Яндекса");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Не удалось получить access_token от Яндекса"));
+            }
+
+            // Получаем информацию о пользователе от Яндекса
+            System.out.println("Получаем информацию о пользователе от Яндекса...");
+            String userInfoUri = "https://login.yandex.ru/info";
+            HttpHeaders userInfoHeaders = new HttpHeaders();
+            userInfoHeaders.set("Authorization", "OAuth " + accessToken);
+            
+            HttpEntity<String> userInfoRequest = new HttpEntity<>(userInfoHeaders);
+            ResponseEntity<String> userInfoResponse = restTemplate.exchange(
+                userInfoUri, 
+                HttpMethod.GET, 
+                userInfoRequest, 
+                String.class
+            );
+
+            System.out.println("Ответ с информацией о пользователе:");
+            System.out.println("- Статус: " + userInfoResponse.getStatusCode());
+            System.out.println("- Тело ответа: " + userInfoResponse.getBody());
+
+            if (!userInfoResponse.getStatusCode().is2xxSuccessful()) {
+                System.err.println("ОШИБКА: Не удалось получить информацию о пользователе: " + userInfoResponse.getStatusCode());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Ошибка получения информации о пользователе"));
+            }
+
+            // Парсим информацию о пользователе
+            String userInfoBody = userInfoResponse.getBody();
+            String email = null;
+            String username = null;
+            String realName = null;
+
+            if (userInfoBody != null) {
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    JsonNode userInfoNode = objectMapper.readTree(userInfoBody);
+                    
+                    if (userInfoNode.has("default_email")) {
+                        email = userInfoNode.get("default_email").asText();
+                        System.out.println("Извлечен email (Jackson): " + email);
+                    }
+                    
+                    if (userInfoNode.has("real_name")) {
+                        realName = userInfoNode.get("real_name").asText();
+                        System.out.println("Извлечено real_name (Jackson): " + realName);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Ошибка парсинга информации о пользователе с Jackson: " + e.getMessage());
+                    
+                    // Fallback: ручной парсинг
+                    if (userInfoBody.contains("\"default_email\":")) {
+                        int startIndex = userInfoBody.indexOf("\"default_email\":\"") + 17;
+                        int endIndex = userInfoBody.indexOf("\"", startIndex);
+                        if (startIndex > 16 && endIndex > startIndex) {
+                            email = userInfoBody.substring(startIndex, endIndex);
+                            System.out.println("Извлечен email (ручной парсинг): " + email);
+                        }
+                    }
+                    
+                    if (userInfoBody.contains("\"real_name\":")) {
+                        int startIndex = userInfoBody.indexOf("\"real_name\":\"") + 13;
+                        int endIndex = userInfoBody.indexOf("\"", startIndex);
+                        if (startIndex > 12 && endIndex > startIndex) {
+                            realName = userInfoBody.substring(startIndex, endIndex);
+                            System.out.println("Извлечено real_name (ручной парсинг): " + realName);
+                        }
+                    }
+                }
+            }
+
+            // Определяем username (email или real_name)
+            if (email != null) {
+                username = email;
+            } else if (realName != null) {
+                username = realName.replaceAll("\\s+", "_").toLowerCase();
+            } else {
+                username = "yandex_user_" + System.currentTimeMillis();
+            }
+            System.out.println("Определен username: " + username);
+
+            // Ищем или создаем пользователя в БД
+            User user = userRepository.findByUsername(username);
+            if (user == null) {
+                System.out.println("Создаем нового пользователя...");
+                // Создаем нового пользователя (автоматическая регистрация)
+                user = new User();
+                user.setUsername(username);
+                user.setEmail(email);
+                
+                // Генерируем случайный пароль (пользователь будет входить через OAuth)
+                String randomPassword = UUID.randomUUID().toString();
+                user.setPassword(passwordEncoder.encode(randomPassword));
+                
+                user = userService.registerUser(user);
+                
+                // Создаем проект по умолчанию для нового пользователя
+                Project defaultProject = new Project();
+                defaultProject.setName("Мой проект");
+                defaultProject.setDescription("Проект по умолчанию");
+                defaultProject.setColor("#BD10E0");
+                defaultProject.setPosition(1);
+                defaultProject.setDefault(true);
+                defaultProject.setUserId(user.getId());
+                defaultProject.setCreatedAt(LocalDateTime.now());
+                
+                projectRepository.save(defaultProject);
+                
+                System.out.println("Создан новый пользователь через Яндекс OAuth: " + username);
+            } else {
+                System.out.println("Найден существующий пользователь: " + username);
+            }
+
+            // Генерируем JWT токены
+            System.out.println("Генерируем JWT токены...");
+            String jwtAccessToken = jwtTokenProvider.generateAccessToken(username);
+            String jwtRefreshToken = jwtTokenProvider.generateRefreshToken(username);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("accessToken", jwtAccessToken);
+            response.put("refreshToken", jwtRefreshToken);
+            response.put("user", Map.of(
+                "id", user.getId().toString(),
+                "username", user.getUsername(),
+                "email", user.getEmail()
+            ));
+
+            System.out.println("=== УСПЕШНО ЗАВЕРШЕНА ОБРАБОТКА YANDEX CALLBACK ===");
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("=== ОШИБКА ПРИ ОБРАБОТКЕ YANDEX CALLBACK ===");
+            System.err.println("Ошибка: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Внутренняя ошибка сервера: " + e.getMessage()));
         }
     }
 

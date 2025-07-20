@@ -35,6 +35,8 @@ public class TelegramBotConfig {
         this.projectService = projectService;
         this.botToken = botToken;
         this.botUsername = botUsername;
+        System.out.println("botToken: " + botToken);
+        System.out.println("botUsername: " + botUsername);
 
     }
 
@@ -46,6 +48,9 @@ public class TelegramBotConfig {
             return null; // не регистрируем бота
         }
         String projectId = null;
+        System.out.println("Создаем бин из TelegramBotConfig");
+        System.out.println("botToken: " + botToken);
+        System.out.println("botUsername: " + botUsername);
         NoteBot bot = new NoteBot(botToken, botUsername, userRepository , projectService);
         telegramBotsApi.registerBot(bot);
         return bot;
