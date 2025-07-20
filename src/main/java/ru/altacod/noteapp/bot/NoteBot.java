@@ -54,6 +54,9 @@ public class NoteBot extends TelegramLongPollingBot {
     @Value("${backend.url}")
     private String backendUrl;
 
+    @Value("${uploaded.path}")
+    private String uploadedPath;
+
     private final Map<String, Message> projectSelectionCache = new HashMap<>();
 
     @Autowired
@@ -418,7 +421,7 @@ public class NoteBot extends TelegramLongPollingBot {
             requestBody.put("fileUrls", fileUrls);
 
             restTemplate.postForEntity(
-                    "http://localhost:8080/api/notes/bot/files",
+                    backendUrl + "/api/notes/bot/files",
                     requestBody,
                     String.class
             );
@@ -444,7 +447,7 @@ public class NoteBot extends TelegramLongPollingBot {
         try {
             RestTemplate restTemplate = new RestTemplate();
             restTemplate.postForEntity(
-                    "http://localhost:8080/api/notes/" + noteId + "/analyze?chatId=" + chatId,
+                    backendUrl + "/api/notes/" + noteId + "/analyze?chatId=" + chatId,
                     null, Void.class
             );
             sendResponse(chatId, "Заметка отправлена на анализ. Ожидайте результатов.");
@@ -474,10 +477,10 @@ private String downloadFileFromTelegram(String fileId, String folder) {
 
         // Определяем локальное имя файла
         String fileName = UUID.randomUUID() + "_" + filePath.substring(filePath.lastIndexOf("/") + 1);
-        String localFilePath = "E:/uploaded/" + folder + "/" + fileName;
+        String localFilePath = uploadedPath + "/" + folder + "/" + fileName;
 
         // Создаём папку, если её нет
-        Path savePath = Paths.get("E:/uploaded/" + folder);
+        Path savePath = Paths.get(uploadedPath + "/" + folder);
         if (!Files.exists(savePath)) {
             Files.createDirectories(savePath);
         }
