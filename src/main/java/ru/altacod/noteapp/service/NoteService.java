@@ -829,15 +829,16 @@ public class NoteService {
         }
 
         // Обновляем теги (clear + addAll)
-        List<Tag> updatedTags = tagService.getTagsByNameAndUserId(noteDTO.getTags(), existingNote.getUser().getId());
+        List<String> safeTags = noteDTO.getTags() != null ? noteDTO.getTags() : new ArrayList<>();
+        List<Tag> updatedTags = tagService.getTagsByNameAndUserId(safeTags, existingNote.getUser().getId());
         existingNote.getTags().clear();
         if (updatedTags != null) {
             existingNote.getTags().addAll(updatedTags);
         }
 
         // Обновляем OpenGraph ссылки
-        List<String> newUrls = noteDTO.getUrls();
-        // Удаляем те OpenGraphData, которых больше нет в списке URL-адресов
+        List<String> newUrls = noteDTO.getUrls() != null ? noteDTO.getUrls() : new ArrayList<>();
+        // Удаляем только те OpenGraphData, которых больше нет в списке URL-адресов
         Iterator<OpenGraphData> iterator = existingNote.getOpenGraphData().iterator();
         while (iterator.hasNext()) {
             OpenGraphData existingOg = iterator.next();
@@ -857,6 +858,7 @@ public class NoteService {
                 }
             }
         }
+        // (setUrls удалён)
 
         return noteRepository.save(existingNote);
     }
