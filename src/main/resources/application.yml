@@ -119,7 +119,7 @@ jwt:
 
 backend:
   url: ${BASE_URL}
-  uploaded:
+uploaded:
     path: ${UPLOAD_PATH}
 
 
